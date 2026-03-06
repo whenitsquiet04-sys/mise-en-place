@@ -122,68 +122,6 @@ body {
 .mobile-nav { display: none; }
 .mobile-add-btn { display: none; }
 
-@media (max-width: 768px) {
-  .app { flex-direction: column; }
-
-  .sidebar {
-    width: 100%; height: 56px; flex-shrink: 0;
-    border-right: none; border-bottom: 1.5px solid var(--border);
-    flex-direction: row; align-items: center;
-    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-    padding: 0 12px; overflow: visible;
-  }
-  .sb-logo { padding: 0 10px 0 4px; border-bottom: none; border-right: 1px solid var(--border); flex-shrink: 0; }
-  .sb-logo-text { font-size: 17px; white-space: nowrap; }
-  .sb-logo-sub { display: none; }
-  .sb-nav, .sb-add-btn { display: none; }
-  .sb-user { margin-top: 0; margin-left: auto; border-top: none; padding: 0; }
-
-  .main-content {
-    margin-top: 56px;
-    height: calc(100vh - 56px - 60px);
-    overflow-y: auto;
-  }
-
-  .topbar { padding: 12px 14px; gap: 8px; }
-  .topbar-title { font-size: 17px; }
-
-  .mobile-nav {
-    display: flex;
-    position: fixed; bottom: 0; left: 0; right: 0;
-    height: 60px; background: var(--sidebar);
-    border-top: 1.5px solid var(--border);
-    z-index: 50;
-  }
-  .mobile-nav-item {
-    flex: 1; display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    font-size: 8px; font-weight: 700; color: var(--ink3);
-    cursor: pointer; gap: 2px;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    transition: color 0.14s;
-    border: none; background: none; font-family: 'Lato', sans-serif;
-  }
-  .mobile-nav-item.active { color: var(--accent); }
-  .mobile-nav-icon { font-size: 19px; }
-
-  .mobile-add-btn {
-    display: flex;
-    align-items: center; gap: 5px;
-    background: var(--accent); color: #fff;
-    border: none; border-radius: 10px;
-    padding: 7px 11px; font-size: 12px; font-weight: 700;
-    cursor: pointer; font-family: 'Lato', sans-serif;
-    white-space: nowrap; flex-shrink: 0;
-  }
-
-  .recipe-grid { grid-template-columns: 1fr !important; }
-
-  #user-name-short { display: none; }
-
-  .modal-overlay { align-items: flex-end; padding: 0; }
-  .modal { border-radius: 20px 20px 0 0; max-height: 92vh; }
-}
-
 /* ═══════════════════════════════════════════
    SIDEBAR
 ═══════════════════════════════════════════ */
@@ -797,6 +735,17 @@ body {
 .empty-sub { font-size: 14px; line-height: 1.7; }
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 .fade-in { animation: fadeUp 0.2s ease forwards; }
+
+/* ── MOBILE (must be last to override) ── */
+@media (max-width: 767px) {
+  #sidebar { display: none !important; }
+  .app { flex-direction: column !important; }
+  .content { width: 100% !important; height: calc(100vh - 60px) !important; overflow-y: auto !important; flex: 1 !important; }
+  .recipe-grid { grid-template-columns: 1fr !important; }
+  .mobile-nav { display: flex !important; }
+  .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
+  .modal { border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; }
+}
 </style>
 </head>
 <body>
@@ -822,7 +771,7 @@ body {
 </div>
 
 <div class="app">
-  <script>if(window.innerWidth<767){document.write('<style>#sidebar,#sidebar *{display:none!important}#sidebar{display:none!important}.app{flex-direction:column}</style>');}</script>
+  <script>if(window.innerWidth<767){document.write('<style>#sidebar{display:none!important}</style>');}</script>
   <!-- SIDEBAR -->
   <div class="sidebar" id="sidebar">
     <div class="sb-logo">
