@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mise en Place">
@@ -1777,7 +1777,13 @@ function closeModalOnBg(e) { if(e.target===document.getElementById('modal-overla
 
 // Mobile layout detection - runs immediately and on resize
 function applyMobileLayout() {
-  const isMobile = window.innerWidth <= 768;
+  const w = window.innerWidth;
+  // Debug — remove after testing
+  let dbg = document.getElementById('dbg-width');
+  if (!dbg) { dbg = document.createElement('div'); dbg.id = 'dbg-width'; dbg.style.cssText = 'position:fixed;top:60px;right:8px;background:red;color:white;font-size:11px;padding:3px 7px;border-radius:6px;z-index:9999;font-family:monospace;'; document.body.appendChild(dbg); }
+  dbg.textContent = w + 'px';
+  
+  const isMobile = w <= 768;
   const sidebar = document.querySelector('.sidebar');
   const mainContent = document.querySelector('.main-content') || document.querySelector('.content');
   const mobileNav = document.getElementById('mobile-nav');
