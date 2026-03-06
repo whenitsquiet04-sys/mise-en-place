@@ -107,6 +107,19 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname;
 
   try {
+    // Debug: list available Gemini models (temporary)
+    if (pathname === '/api/gemini-models') {
+      const GEMINI_KEY = process.env.GEMINI_API_KEY;
+      const result = await new Promise((resolve, reject) => {
+        https.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_KEY}`, res => {
+          let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
+        }).on('error', reject);
+      });
+      res.writeHead(200, {'Content-Type':'application/json'});
+      res.end(result);
+      return;
+    }
+
     if (pathname === '/auth/google') {
       const state = crypto.randomBytes(16).toString('hex');
       setCookie(res, 'oauth_state', state, { maxAge: 600 });
@@ -176,19 +189,6 @@ const server = http.createServer(async (req, res) => {
         console.error('URL fetch error:', e.message);
         return json(res, { error: 'Could not fetch URL' }, 500);
       }
-    }
-
-    // Debug: list available Gemini models
-    if (pathname === '/api/gemini-models') {
-      const GEMINI_KEY = process.env.GEMINI_API_KEY;
-      const result = await new Promise((resolve, reject) => {
-        https.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_KEY}`, res => {
-          let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
-        }).on('error', reject);
-      });
-      res.writeHead(200, {'Content-Type':'application/json'});
-      res.end(result);
-      return;
     }
 
     // Gemini API proxy
