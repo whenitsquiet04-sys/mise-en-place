@@ -1,3 +1,4 @@
+
 <!-- v2-green-theme -->
 <!DOCTYPE html>
 <html lang="en">
@@ -1539,22 +1540,14 @@ function openRecipeForm(r=null) {
           <div class="import-hint">Copy the recipe text from any website and paste it here. AI will extract the title, ingredients and steps automatically.</div>
         </div>
         <div class="import-panel" id="ip-instagram">
-          <div style="margin-bottom:8px;font-size:12px;color:var(--ink2)">Share an Instagram post to this app, or upload a screenshot:</div>
-          <div class="import-input-row">
-            <input class="import-url-input" id="ig-url" placeholder="Paste Instagram URL (if using Share Sheet)">
-            <button class="import-btn" onclick="document.getElementById('ig-file').click()">📷 Screenshot</button>
-          </div>
-          <div id="ig-status"></div>
-          <div class="import-hint">📱 On iPhone/iPad: Open the Instagram post → tap Share → choose <b>Mise en Place</b> from the share sheet. Or upload a screenshot and AI will read the recipe from it.</div>
+          <textarea class="import-url-input" id="ig-text" placeholder="Paste the Instagram caption or recipe text here…" style="height:110px;resize:none;line-height:1.5;padding:10px 12px"></textarea>
+          <button class="import-btn" id="ig-import-btn" onclick="importFromIGText()" style="width:100%;margin-top:6px">✨ Extract Recipe</button>
+          <div class="import-hint">Open the Instagram post → tap <b>···</b> → <b>Copy</b> the caption, then paste it above. AI will extract the recipe automatically.</div>
         </div>
         <div class="import-panel" id="ip-scan">
-          <div class="upload-zone" onclick="document.getElementById('scan-file').click()">
-            <div class="upload-icon">📸</div>
-            <div class="upload-text">Take a photo of your cookbook page</div>
-            <div class="upload-sub">or tap to upload a saved image</div>
-          </div>
-          <div id="scan-status"></div>
-          <div class="import-hint">AI will read the recipe directly from your photo and fill in all the fields below.</div>
+          <textarea class="import-url-input" id="scan-text" placeholder="Type or paste the recipe from your cookbook here…" style="height:110px;resize:none;line-height:1.5;padding:10px 12px"></textarea>
+          <button class="import-btn" id="scan-import-btn" onclick="importFromScanText()" style="width:100%;margin-top:6px">✨ Extract Recipe</button>
+          <div class="import-hint">Type out the recipe, or use your phone's camera to scan the page — iOS will let you copy the text directly from a photo in the Notes app.</div>
         </div>
       </div>
 
@@ -1720,74 +1713,28 @@ async function importFromText() {
   btn.disabled=false; btn.textContent='✨ Extract Recipe';
 }
 
-async function handleIGScreenshot(e) {
-  const file=e.target.files[0]; if(!file) return;
-  const status=document.getElementById('ig-status');
-  status.innerHTML='<div class="ai-status"><span class="ai-spinner">⏳</span> Reading text from screenshot…</div>';
+async function importFromIGText() {
+  const text = document.getElementById('ig-text')?.value.trim();
+  if(!text){showToast('⚠️ Paste some text first');return;}
+  const btn=document.getElementById('ig-import-btn'); btn.disabled=true; btn.textContent='⏳ Extracting…';
   try {
-    const ocrText = await runOCR(file);
-    if (!ocrText || ocrText.trim().length < 20) {
-      status.innerHTML='<div class="ai-status">⚠️ Could not read text — try a clearer screenshot</div>';
-      return;
-    }
-    status.innerHTML='<div class="ai-status"><span class="ai-spinner">⏳</span> Extracting recipe…</div>';
-    const text = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this Instagram screenshot text. Set source to "instagram".\n\n${ocrText}`);
-    const ok = fillFormFromAI(text, {source:'instagram'});
-    if (ok) {
-      status.innerHTML='<div class="ai-status">✅ Recipe extracted!</div>';
-      showToast('📸 Instagram recipe extracted!');
-    }
-  } catch(err) {
-    console.error('IG screenshot error:', err);
-    status.innerHTML='<div class="ai-status">⚠️ Could not read screenshot — try a clearer image</div>';
-  }
+    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this Instagram post text. Set source to "instagram".\n\n${text}`);
+    const ok = fillFormFromAI(result, {source:'instagram'});
+    if(ok) showToast('📸 Recipe extracted!');
+  } catch(e) { showToast('⚠️ Extraction failed — try again'); }
+  btn.disabled=false; btn.textContent='✨ Extract Recipe';
 }
 
-async function handleScan(e) {
-  const file=e.target.files[0]; if(!file) return;
-  const status=document.getElementById('scan-status');
-  status.innerHTML='<div class="ai-status"><span class="ai-spinner">⏳</span> Reading cookbook page…</div>';
+async function importFromScanText() {
+  const text = document.getElementById('scan-text')?.value.trim();
+  if(!text){showToast('⚠️ Paste some text first');return;}
+  const btn=document.getElementById('scan-import-btn'); btn.disabled=true; btn.textContent='⏳ Extracting…';
   try {
-    const ocrText = await runOCR(file);
-    if (!ocrText || ocrText.trim().length < 20) {
-      status.innerHTML='<div class="ai-status">⚠️ Could not read text — try a clearer photo</div>';
-      return;
-    }
-    status.innerHTML='<div class="ai-status"><span class="ai-spinner">⏳</span> Extracting recipe…</div>';
-    const text = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this cookbook page text. Set source to "cookbook".\n\n${ocrText}`);
-    const ok = fillFormFromAI(text, {source:'cookbook'});
-    if (ok) {
-      status.innerHTML='<div class="ai-status">✅ Recipe extracted from cookbook!</div>';
-      showToast('📚 Cookbook recipe scanned!');
-    }
-  } catch(err) {
-    console.error('Scan error:', err);
-    status.innerHTML='<div class="ai-status">⚠️ Could not read image — try a clearer photo</div>';
-  }
-}
-
-function runOCR(file) {
-  return new Promise((resolve, reject) => {
-    // Dynamically load Tesseract.js
-    if (window.Tesseract) return doOCR();
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
-    script.onload = doOCR;
-    script.onerror = () => reject(new Error('Could not load OCR library'));
-    document.head.appendChild(script);
-
-    function doOCR() {
-      const url = URL.createObjectURL(file);
-      Tesseract.recognize(url, 'eng', {
-        logger: m => { if (m.status === 'recognizing text') {
-          const pct = Math.round((m.progress||0)*100);
-          const statusEl = document.getElementById('ig-status') || document.getElementById('scan-status');
-          if (statusEl) statusEl.innerHTML = `<div class="ai-status"><span class="ai-spinner">⏳</span> Reading text… ${pct}%</div>`;
-        }}
-      }).then(r => { URL.revokeObjectURL(url); resolve(r.data.text); })
-        .catch(err => { URL.revokeObjectURL(url); reject(err); });
-    }
-  });
+    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this cookbook text. Set source to "cookbook".\n\n${text}`);
+    const ok = fillFormFromAI(result, {source:'cookbook'});
+    if(ok) showToast('📚 Recipe extracted!');
+  } catch(e) { showToast('⚠️ Extraction failed — try again'); }
+  btn.disabled=false; btn.textContent='✨ Extract Recipe';
 }
 
 function fileToBase64(file) {
@@ -1951,25 +1898,46 @@ if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw.js').catch(()=>{});
 }
 
-// Handle incoming share from Instagram share sheet
+// Handle incoming share from iOS Shortcut or share sheet
 (function() {
   const sp = new URLSearchParams(window.location.search);
-  const sharedUrl = sp.get('shared_url');
-  const sharedText = sp.get('shared_text');
+  const sharedUrl = sp.get('shared_url') || sp.get('url');
+  const sharedText = sp.get('shared_text') || sp.get('text');
   if (sharedUrl || sharedText) {
     setTimeout(() => {
       openAddRecipe();
-      setTimeout(() => {
+      setTimeout(async () => {
         switchImport('instagram');
-        const igInput = document.getElementById('ig-url');
-        if (igInput && sharedUrl) igInput.value = sharedUrl;
         showToast('📸 Instagram post received…');
-        if (sharedUrl) {
-          const status = document.getElementById('ig-status');
-          if (status) status.innerHTML = '<div class="ai-status"><span class="ai-spinner">⏳</span> Extracting recipe with AI…</div>';
-          callClaude(RECIPE_SYSTEM, `Extract a recipe from this Instagram share. URL: ${sharedUrl}\nText: ${sharedText||''}\nSet source to "instagram" and sourceUrl to "${sharedUrl}".`)
-            .then(text => { fillFormFromAI(text, {source:'instagram', sourceUrl: sharedUrl}); if(status) status.innerHTML='<div class="ai-status">✅ Recipe extracted!</div>'; showToast('📸 Recipe extracted!'); })
-            .catch(() => { if(status) status.innerHTML='<div class="ai-status">⚠️ Could not extract — fill in manually or upload a screenshot</div>'; });
+        const status = document.getElementById('ig-status');
+        if (status) status.innerHTML = '<div class="ai-status"><span class="ai-spinner">⏳</span> Fetching recipe…</div>';
+        try {
+          let pageText = sharedText || '';
+          if (sharedUrl) {
+            // Try to fetch page content via server
+            try {
+              const fetchResp = await fetch('/api/fetch-url', {
+                method: 'POST', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify({ url: sharedUrl })
+              });
+              const fetchData = await fetchResp.json();
+              if (fetchData.text && fetchData.text.length > 100) pageText = fetchData.text;
+            } catch(e) {}
+          }
+          const prompt = `Extract a recipe from this Instagram share. URL: ${sharedUrl||''}\nText: ${pageText}\nSet source to "instagram" and sourceUrl to "${sharedUrl||''}".`;
+          const text = await callClaude(RECIPE_SYSTEM, prompt);
+          const ok = fillFormFromAI(text, {source:'instagram', sourceUrl: sharedUrl||''});
+          if (ok) {
+            if (status) status.innerHTML = '<div class="ai-status">✅ Recipe extracted!</div>';
+            showToast('📸 Recipe extracted!');
+          } else {
+            // Fall back — put URL in the text box so user can try manually
+            const igText = document.getElementById('ig-text');
+            if (igText && sharedUrl) igText.value = sharedUrl;
+            if (status) status.innerHTML = '<div class="ai-status">⚠️ Could not auto-extract — paste the caption above</div>';
+          }
+        } catch(e) {
+          if (status) status.innerHTML = '<div class="ai-status">⚠️ Could not extract — paste the caption above</div>';
         }
       }, 400);
     }, 1000);
