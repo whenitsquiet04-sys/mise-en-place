@@ -1,3 +1,4 @@
+
 <!-- v2-green-theme -->
 <!DOCTYPE html>
 <html lang="en">
@@ -725,8 +726,11 @@ body {
   transform: translateX(-50%) translateY(10px);
   background: rgba(44,31,14,0.9); border-radius: 22px;
   padding: 10px 22px; font-size: 13px; font-weight: 700; color: #f5e8d8;
-  z-index: 500; opacity: 0; pointer-events: none; transition: all 0.22s;
+  z-index: 1000; opacity: 0; pointer-events: none; transition: all 0.22s;
   white-space: nowrap; box-shadow: 0 4px 20px rgba(44,31,14,0.3);
+}
+@media (max-width: 767px) {
+  .toast { bottom: 76px; }
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--ink3); }
@@ -1689,19 +1693,15 @@ function switchImport(type) {
 }
 
 async function callClaude(systemPrompt, userContent) {
-  const body = {
-    model:'claude-sonnet-4-20250514',
-    max_tokens:2000,
-    system: systemPrompt,
-    messages:[{role:'user',content:userContent}]
-  };
-  const resp = await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body)
+  // Proxy through our server to avoid CORS and API key issues
+  const resp = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ system: systemPrompt, content: userContent })
   });
+  if (!resp.ok) throw new Error('Claude API error: ' + resp.status);
   const data = await resp.json();
-  return data.content?.map(c=>c.text||'').join('');
+  return data.text || '';
 }
 
 const RECIPE_SYSTEM = `You are a recipe extraction assistant. Extract recipe information and return ONLY valid JSON with this exact structure:
