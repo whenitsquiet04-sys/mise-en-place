@@ -947,6 +947,7 @@ function defaultState() {
     shoppingChecked: {},
     nextId: 20,
     activeCourseFilter: 'all',
+    activeTagFilter: null,
   };
 }
 
@@ -969,11 +970,27 @@ function getWeekDates(offset=0) {
 function dateKey(d) { return d.toISOString().split('T')[0]; }
 function fmtDate(d) { return d.toLocaleDateString('default',{weekday:'short',month:'short',day:'numeric'}); }
 function getTag(name) { return S.tags.find(t=>t.name===name); }
-function tagHTML(name) {
+function filterByTag(name) {
+  currentTab = 'recipes';
+  S.activeCourseFilter = 'all';
+  S.activeTagFilter = name;
+  ['recipes','favourites','planner','shopping','tags'].forEach(t=>{
+    const el = document.getElementById('nav-'+t);
+    if (el) el.classList.toggle('active', t==='recipes');
+  });
+  document.getElementById('course-tabs').style.display = 'flex';
+  updateSidebar();
+  renderContent();
+  showToast(`🏷️ Filtering by "${name}"`);
+}
+
+function tagHTML(name, clickable=true) {
   const t = getTag(name);
-  if (!t) return `<span class="rc-tag" style="background:rgba(180,140,80,0.15);color:var(--ink2);border:1px solid rgba(180,140,80,0.25)">${esc(name)}</span>`;
-  const p = PALETTE[t.paletteIdx%PALETTE.length];
-  return `<span class="rc-tag" style="background:${p.bg};color:${p.color};border:1px solid ${p.border}">${esc(name)}</span>`;
+  const style = t
+    ? `background:${PALETTE[t.paletteIdx%PALETTE.length].bg};color:${PALETTE[t.paletteIdx%PALETTE.length].color};border:1px solid ${PALETTE[t.paletteIdx%PALETTE.length].border}`
+    : `background:rgba(180,140,80,0.15);color:var(--ink2);border:1px solid rgba(180,140,80,0.25)`;
+  const click = clickable ? `onclick="event.stopPropagation();filterByTag('${esc(name)}')" style="${style};cursor:pointer"` : `style="${style}"`;
+  return `<span class="rc-tag" ${click}>${esc(name)}</span>`;
 }
 function sourceIcon(s) { return s==='instagram'?'📸':s==='url'?'🔗':s==='cookbook'?'📚':'✏️'; }
 function coverHTML(r, w=52, h=52, radius=8) {
@@ -989,6 +1006,7 @@ function getRecipesByFilter(filter='all') {
   if (filter==='favourites') list = list.filter(r=>r.favourite);
   else if (filter!=='all') list = list.filter(r=>r.course===filter);
   if (S.activeCourseFilter && S.activeCourseFilter!=='all') list = list.filter(r=>r.course===S.activeCourseFilter);
+  if (S.activeTagFilter) list = list.filter(r=>(r.tags||[]).includes(S.activeTagFilter));
   return list;
 }
 
@@ -1017,6 +1035,7 @@ let currentTab = 'recipes';
 function showTab(tab) {
   currentTab = tab;
   S.activeCourseFilter = 'all';
+  S.activeTagFilter = null;
   ['recipes','favourites','planner','shopping','tags'].forEach(t=>{
     const el = document.getElementById('nav-'+t);
     if (el) el.classList.toggle('active', t===tab);
@@ -1049,11 +1068,12 @@ function filterCourse(c) {
 function renderContent() {
   updateSidebar();
   const c = document.getElementById('main-content');
-  // Update topbar
   const titles = {recipes:'All Recipes',favourites:'Favourites',planner:'Meal Planner',shopping:'Shopping List',tags:'My Tags'};
   document.getElementById('topbar-title').textContent = titles[currentTab]||'';
   if (currentTab==='recipes'||currentTab==='favourites') {
-    document.getElementById('topbar-sub').textContent = `${getRecipesByFilter(currentTab==='favourites'?'favourites':'all').length} recipe${getRecipesByFilter(currentTab==='favourites'?'favourites':'all').length===1?'':'s'}`;
+    const count = getRecipesByFilter(currentTab==='favourites'?'favourites':'all').length;
+    const tagBadge = S.activeTagFilter ? ` &nbsp;<span style="background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);border-radius:20px;padding:2px 10px;font-size:11px;cursor:pointer" onclick="clearTagFilter()">🏷️ ${esc(S.activeTagFilter)} ✕</span>` : '';
+    document.getElementById('topbar-sub').innerHTML = `${count} recipe${count===1?'':'s'}${tagBadge}`;
     renderCourseTabs();
     renderTopbarSearch();
     c.innerHTML = renderRecipeGrid(currentTab==='favourites'?'favourites':'all');
@@ -1061,6 +1081,11 @@ function renderContent() {
   if (currentTab==='planner') { document.getElementById('topbar-sub').textContent='Weekly view'; document.getElementById('topbar-right').innerHTML=''; c.innerHTML=renderPlanner(); }
   if (currentTab==='shopping') { document.getElementById('topbar-sub').textContent=`${S.shoppingList.length} items`; document.getElementById('topbar-right').innerHTML=''; c.innerHTML=renderShopping(); }
   if (currentTab==='tags') { document.getElementById('topbar-sub').textContent=`${S.tags.length} tags`; document.getElementById('topbar-right').innerHTML=''; c.innerHTML=renderTags(); }
+}
+
+function clearTagFilter() {
+  S.activeTagFilter = null;
+  renderContent();
 }
 function renderMain() { renderContent(); }
 function renderCourseTabs() {
