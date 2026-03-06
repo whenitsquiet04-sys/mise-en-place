@@ -1,3 +1,4 @@
+<!-- v2-green-theme -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -24,7 +25,7 @@
   border: 1.5px solid #c4d8b8;
   border-radius: 28px; padding: 48px 40px 44px;
   max-width: 400px; width: 100%; text-align: center;
-  box-shadow: 0 20px 60px rgba(140,90,30,0.12);
+  box-shadow: 0 20px 60px rgba(40,90,40,0.12);
 }
 .auth-logo { font-family: 'Playfair Display', serif; font-style: italic; font-size: 38px; color: #1a2e1a; margin-bottom: 4px; }
 .auth-sub { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: #6a9a6a; margin-bottom: 36px; }
@@ -35,7 +36,7 @@
   background: #fff; border: 1.5px solid #a8c498;
   border-radius: 14px; cursor: pointer; text-decoration: none;
   font-family: 'Lato', sans-serif; font-size: 14px; font-weight: 700; color: #1a2e1a;
-  transition: all 0.14s; box-shadow: 0 2px 8px rgba(140,90,30,0.1);
+  transition: all 0.14s; box-shadow: 0 2px 8px rgba(40,90,40,0.1);
 }
 .google-btn:hover { border-color: #3d6b45; box-shadow: 0 4px 16px rgba(40,90,40,0.15); transform: translateY(-1px); }
 .auth-note { font-size: 11px; color: #6a9a6a; margin-top: 20px; line-height: 1.7; }
@@ -114,6 +115,74 @@ body {
    LAYOUT
 ═══════════════════════════════════════════ */
 .app { display: flex; height: 100vh; }
+
+/* ═══════════════════════════════════════════
+   MOBILE RESPONSIVE
+═══════════════════════════════════════════ */
+.mobile-nav { display: none; }
+.mobile-add-btn { display: none; }
+
+@media (max-width: 600px) {
+  .app { flex-direction: column; }
+
+  .sidebar {
+    width: 100%; height: 56px; flex-shrink: 0;
+    border-right: none; border-bottom: 1.5px solid var(--border);
+    flex-direction: row; align-items: center;
+    position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+    padding: 0 12px; overflow: visible;
+  }
+  .sb-logo { padding: 0 10px 0 4px; border-bottom: none; border-right: 1px solid var(--border); flex-shrink: 0; }
+  .sb-logo-text { font-size: 17px; white-space: nowrap; }
+  .sb-logo-sub { display: none; }
+  .sb-nav, .sb-add-btn { display: none; }
+  .sb-user { margin-top: 0; margin-left: auto; border-top: none; padding: 0; }
+
+  .main-content {
+    margin-top: 56px;
+    height: calc(100vh - 56px - 60px);
+    overflow-y: auto;
+  }
+
+  .topbar { padding: 12px 14px; gap: 8px; }
+  .topbar-title { font-size: 17px; }
+
+  .mobile-nav {
+    display: flex;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 60px; background: var(--sidebar);
+    border-top: 1.5px solid var(--border);
+    z-index: 50;
+  }
+  .mobile-nav-item {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 700; color: var(--ink3);
+    cursor: pointer; gap: 2px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    transition: color 0.14s;
+    border: none; background: none; font-family: 'Lato', sans-serif;
+  }
+  .mobile-nav-item.active { color: var(--accent); }
+  .mobile-nav-icon { font-size: 19px; }
+
+  .mobile-add-btn {
+    display: flex;
+    align-items: center; gap: 5px;
+    background: var(--accent); color: #fff;
+    border: none; border-radius: 10px;
+    padding: 7px 11px; font-size: 12px; font-weight: 700;
+    cursor: pointer; font-family: 'Lato', sans-serif;
+    white-space: nowrap; flex-shrink: 0;
+  }
+
+  .recipe-grid { grid-template-columns: 1fr !important; }
+
+  #user-name-short { display: none; }
+
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal { border-radius: 20px 20px 0 0; max-height: 92vh; }
+}
 
 /* ═══════════════════════════════════════════
    SIDEBAR
@@ -815,6 +884,25 @@ body {
     </div>
     <div class="content" id="main-content"></div>
   </div>
+</div>
+
+<!-- MOBILE BOTTOM NAV -->
+<div class="mobile-nav" id="mobile-nav">
+  <button class="mobile-nav-item active" id="mnav-library" onclick="mobileNav('library')">
+    <span class="mobile-nav-icon">📖</span>Library
+  </button>
+  <button class="mobile-nav-item" id="mnav-planner" onclick="mobileNav('planner')">
+    <span class="mobile-nav-icon">📅</span>Plan
+  </button>
+  <button class="mobile-nav-item" id="mnav-shopping" onclick="mobileNav('shopping')">
+    <span class="mobile-nav-icon">🛒</span>Shop
+  </button>
+  <button class="mobile-nav-item" id="mnav-tags" onclick="mobileNav('tags')">
+    <span class="mobile-nav-icon">🏷️</span>Tags
+  </button>
+  <button class="mobile-nav-item" onclick="openAddRecipe()">
+    <span class="mobile-nav-icon">＋</span>Add
+  </button>
 </div>
 
 <!-- MODAL -->
@@ -1686,6 +1774,14 @@ function fillFormFromAI(jsonText, overrides={}) {
 function openModal() { document.getElementById('modal-overlay').classList.add('show'); }
 function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); }
 function closeModalOnBg(e) { if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+
+// Mobile nav handler
+function mobileNav(section) {
+  document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
+  const map = { library: 'mnav-library', planner: 'mnav-planner', shopping: 'mnav-shopping', tags: 'mnav-tags' };
+  if (map[section]) document.getElementById(map[section])?.classList.add('active');
+  navigate(section === 'library' ? 'all' : section);
+}
 
 // ═══════════════════════════════════════════
 // AUTH & SERVER SYNC
