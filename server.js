@@ -178,6 +178,19 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
+    // Debug: list available Gemini models
+    if (pathname === '/api/gemini-models') {
+      const GEMINI_KEY = process.env.GEMINI_API_KEY;
+      const result = await new Promise((resolve, reject) => {
+        https.get(`https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_KEY}`, res => {
+          let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
+        }).on('error', reject);
+      });
+      res.writeHead(200, {'Content-Type':'application/json'});
+      res.end(result);
+      return;
+    }
+
     // Gemini API proxy
     if (pathname === '/api/claude' && req.method === 'POST') {
       const user = getSession(req);
