@@ -1759,7 +1759,8 @@ function mobileNav(section) {
   document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
   const map = { library: 'mnav-library', planner: 'mnav-planner', shopping: 'mnav-shopping', tags: 'mnav-tags' };
   if (map[section]) document.getElementById(map[section])?.classList.add('active');
-  navigate(section === 'library' ? 'all' : section);
+  const tabMap = { library: 'recipes', planner: 'planner', shopping: 'shopping', tags: 'tags' };
+  showTab(tabMap[section] || section);
 }
 
 // ═══════════════════════════════════════════
