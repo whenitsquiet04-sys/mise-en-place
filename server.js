@@ -191,53 +191,35 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // Gemini API proxy
+    // Groq API proxy
     if (pathname === '/api/claude' && req.method === 'POST') {
       const user = getSession(req);
       if (!user) return json(res, { error: 'Unauthorized' }, 401);
-      const GEMINI_KEY = process.env.GEMINI_API_KEY;
-      if (!GEMINI_KEY) return json(res, { error: 'GEMINI_API_KEY not configured on server' }, 500);
+      const GROQ_KEY = process.env.GROQ_API_KEY;
+      if (!GROQ_KEY) return json(res, { error: 'GROQ_API_KEY not configured on server' }, 500);
       const body = await parseBody(req);
       try {
-        const models = ['gemini-pro', 'gemini-1.0-pro', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-lite'];
-        let text = '';
-        let workingModel = '';
-        for (const model of models) {
-          const payload = JSON.stringify({
-            contents: [{ parts: [{ text: 'Say "ok"' }] }],
-            generationConfig: { maxOutputTokens: 10 }
-          });
-          const result = await httpsPost(
-            'generativelanguage.googleapis.com',
-            `/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
-            payload
-          );
-          console.log(`Model ${model}:`, JSON.stringify(result).substring(0, 100));
-          if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            workingModel = model;
-            break;
-          }
-        }
-        console.log('Working model:', workingModel);
-        if (!workingModel) return json(res, { error: 'No working Gemini model found' }, 500);
-
-        const prompt = (body.system ? body.system + '\n\n' : '') + (typeof body.content === 'string' ? body.content : JSON.stringify(body.content));
+        const messages = [];
+        if (body.system) messages.push({ role: 'system', content: body.system });
+        messages.push({ role: 'user', content: typeof body.content === 'string' ? body.content : JSON.stringify(body.content) });
         const payload = JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 2000, temperature: 0.2 }
+          model: 'llama-3.3-70b-versatile',
+          messages,
+          max_tokens: 2000,
+          temperature: 0.2
         });
         const result = await httpsPost(
-          'generativelanguage.googleapis.com',
-          `/v1beta/models/${workingModel}:generateContent?key=${GEMINI_KEY}`,
-          payload
+          'api.groq.com',
+          '/openai/v1/chat/completions',
+          payload,
+          { 'Authorization': `Bearer ${GROQ_KEY}` }
         );
-        console.log('Gemini result:', JSON.stringify(result).substring(0, 500));
-        text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        console.log('Gemini text:', text.substring(0, 200));
+        console.log('Groq result:', JSON.stringify(result).substring(0, 300));
+        const text = result?.choices?.[0]?.message?.content || '';
         return json(res, { text });
       } catch(e) {
-        console.error('Gemini proxy error:', e.message);
-        return json(res, { error: 'Gemini API failed' }, 500);
+        console.error('Groq proxy error:', e.message);
+        return json(res, { error: 'Groq API failed' }, 500);
       }
     }
 
