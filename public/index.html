@@ -1534,11 +1534,9 @@ function openRecipeForm(r=null) {
           <div class="import-tab" onclick="switchImport('scan')">📚 Scan Cookbook</div>
         </div>
         <div class="import-panel active" id="ip-url">
-          <div class="import-input-row">
-            <input class="import-url-input" id="import-url" placeholder="Paste recipe URL (e.g. https://seriouseats.com/…)">
-            <button class="import-btn" id="import-url-btn" onclick="importFromURL()">✨ Import</button>
-          </div>
-          <div class="import-hint">Paste any recipe website URL and AI will extract the title, ingredients and steps automatically.</div>
+          <textarea class="import-url-input" id="import-text" placeholder="Paste the recipe text here — copy it from any website, blog, or anywhere…" style="height:110px;resize:none;line-height:1.5;padding:10px 12px"></textarea>
+          <button class="import-btn" id="import-url-btn" onclick="importFromText()" style="width:100%;margin-top:6px">✨ Extract Recipe</button>
+          <div class="import-hint">Copy the recipe text from any website and paste it here. AI will extract the title, ingredients and steps automatically.</div>
         </div>
         <div class="import-panel" id="ip-instagram">
           <div style="margin-bottom:8px;font-size:12px;color:var(--ink2)">Share an Instagram post to this app, or upload a screenshot:</div>
@@ -1707,31 +1705,19 @@ const RECIPE_SYSTEM = `You are a recipe extraction assistant. Extract recipe inf
 {"title":"","course":"","time":0,"servings":0,"emoji":"🍽️","ingredients":[{"qty":"","name":""}],"steps":[""],"notes":"","source":"","sourceUrl":""}
 Course must be one of: Mains, Sides, Desserts, Snacks, Baking. Time is in minutes as a number. No markdown, no explanation, just the JSON object.`;
 
-async function importFromURL() {
-  const url = document.getElementById('import-url')?.value.trim();
-  if(!url){showToast('⚠️ Paste a URL first');return;}
-  const btn=document.getElementById('import-url-btn'); btn.disabled=true; btn.textContent='⏳ Fetching…';
+async function importFromText() {
+  const text = document.getElementById('import-text')?.value.trim();
+  if(!text){showToast('⚠️ Paste some recipe text first');return;}
+  const btn=document.getElementById('import-url-btn'); btn.disabled=true; btn.textContent='⏳ Extracting…';
   try {
-    // First fetch the page content on the server
-    const fetchResp = await fetch('/api/fetch-url', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ url })
-    });
-    const fetchData = await fetchResp.json();
-    btn.textContent = '⏳ Extracting…';
-    const pageText = fetchData.text || '';
-    const prompt = pageText
-      ? `Extract the recipe from this webpage content. Set sourceUrl to "${url}" and source to "url".\n\nPage content:\n${pageText}`
-      : `Extract the recipe from this URL: ${url}. Set sourceUrl to "${url}" and source to "url".`;
-    const text = await callClaude(RECIPE_SYSTEM, prompt);
-    console.log('Gemini raw response:', text?.substring(0, 500));
-    const ok = fillFormFromAI(text, {source:'url', sourceUrl:url});
-    if (ok) showToast('✨ Recipe imported!');
+    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this text. Set source to "url".\n\n${text}`);
+    const ok = fillFormFromAI(result, {source:'url'});
+    if (ok) showToast('✨ Recipe extracted!');
   } catch(e) {
-    console.error('importFromURL error:', e);
-    showToast('⚠️ Import failed — try pasting the recipe text manually');
+    console.error('importFromText error:', e);
+    showToast('⚠️ Extraction failed — try again');
   }
-  btn.disabled=false; btn.innerHTML='✨ Import';
+  btn.disabled=false; btn.textContent='✨ Extract Recipe';
 }
 
 async function handleScan(e) {
