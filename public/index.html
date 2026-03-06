@@ -739,8 +739,8 @@ body {
 /* ── MOBILE — must be last to win ── */
 @media (max-width: 767px) {
   .sidebar { display: none !important; }
-  .app { flex-direction: column !important; }
-  .content { width: 100% !important; height: calc(100vh - 60px) !important; overflow-y: auto !important; }
+  .app { flex-direction: column !important; height: 100vh !important; overflow: hidden !important; }
+  #main-content { width: 100% !important; height: calc(100vh - 60px) !important; overflow-y: auto !important; padding-bottom: 10px !important; }
   .recipe-grid { grid-template-columns: 1fr !important; }
   .topbar { padding: 12px 14px; }
   .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
@@ -772,6 +772,8 @@ body {
     border: none !important;
     background: none !important;
     font-family: 'Lato', sans-serif !important;
+    -webkit-tap-highlight-color: rgba(0,0,0,0.1) !important;
+    touch-action: manipulation !important;
   }
   .mobile-nav-item.active { color: var(--accent) !important; }
   .mobile-nav-icon { font-size: 20px !important; line-height: 1 !important; }
