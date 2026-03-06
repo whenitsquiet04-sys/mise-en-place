@@ -196,7 +196,9 @@ const server = http.createServer(async (req, res) => {
           `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
           payload
         );
+        console.log('Gemini result:', JSON.stringify(result).substring(0, 500));
         const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        console.log('Gemini text:', text.substring(0, 200));
         return json(res, { text });
       } catch(e) {
         console.error('Gemini proxy error:', e.message);
