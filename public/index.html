@@ -1711,12 +1711,26 @@ Course must be one of: Mains, Sides, Desserts, Snacks, Baking. Time is in minute
 async function importFromURL() {
   const url = document.getElementById('import-url')?.value.trim();
   if(!url){showToast('⚠️ Paste a URL first');return;}
-  const btn=document.getElementById('import-url-btn'); btn.disabled=true; btn.textContent='⏳ Importing…';
+  const btn=document.getElementById('import-url-btn'); btn.disabled=true; btn.textContent='⏳ Fetching…';
   try {
-    const text = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this URL. The URL is: ${url}\n\nPlease extract any recipe information you can infer from the URL itself (domain name, recipe name in URL path, etc.) and create a reasonable recipe structure. Set sourceUrl to "${url}" and source to "url".`);
-    fillFormFromAI(text, {source:'url', sourceUrl:url});
-    showToast('✨ Recipe imported!');
-  } catch(e) { showToast('⚠️ Import failed — try pasting the recipe manually'); }
+    // First fetch the page content on the server
+    const fetchResp = await fetch('/api/fetch-url', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ url })
+    });
+    const fetchData = await fetchResp.json();
+    btn.textContent = '⏳ Extracting…';
+    const pageText = fetchData.text || '';
+    const prompt = pageText
+      ? `Extract the recipe from this webpage content. Set sourceUrl to "${url}" and source to "url".\n\nPage content:\n${pageText}`
+      : `Extract the recipe from this URL: ${url}. Set sourceUrl to "${url}" and source to "url".`;
+    const text = await callClaude(RECIPE_SYSTEM, prompt);
+    const ok = fillFormFromAI(text, {source:'url', sourceUrl:url});
+    if (ok) showToast('✨ Recipe imported!');
+  } catch(e) {
+    console.error('importFromURL error:', e);
+    showToast('⚠️ Import failed — try pasting the recipe text manually');
+  }
   btn.disabled=false; btn.innerHTML='✨ Import';
 }
 
@@ -1759,19 +1773,31 @@ function fileToBase64(file) {
 }
 function fillFormFromAI(jsonText, overrides={}) {
   try {
-    const clean=jsonText.replace(/```json|```/g,'').trim();
-    const d=JSON.parse(clean);
-    const data={...d,...overrides};
-    if(data.title) {const el=document.getElementById('f-title');if(el)el.value=data.title;}
-    if(data.course&&S.courses.includes(data.course)){const el=document.getElementById('f-course');if(el)el.value=data.course;}
-    if(data.time){const el=document.getElementById('f-time');if(el)el.value=data.time;}
-    if(data.servings){const el=document.getElementById('f-servings');if(el)el.value=data.servings;}
-    if(data.emoji){const el=document.getElementById('f-emoji');if(el)el.value=data.emoji;}
-    if(data.notes){const el=document.getElementById('f-notes');if(el)el.value=data.notes;}
-    if(data.ingredients?.length){modalIngredients=data.ingredients;rebuildIngs();}
-    if(data.steps?.length){modalSteps=data.steps;rebuildSteps();}
-    if(overrides.source){const r=S.recipes.find(r=>r.id===editingRecipeId);if(r){r.source=overrides.source;r.sourceUrl=overrides.sourceUrl||'';}}
-  } catch(e){showToast('⚠️ Could not parse AI response — please fill in manually');}
+    // Strip markdown fences and find JSON object
+    let clean = jsonText.replace(/```json|```/g,'').trim();
+    // Extract just the JSON object if there's surrounding text
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) clean = match[0];
+    const d = JSON.parse(clean);
+    const data = {...d, ...overrides};
+    if (data.title) { const el=document.getElementById('f-title'); if(el) el.value=data.title; }
+    if (data.course && S.courses.includes(data.course)) { const el=document.getElementById('f-course'); if(el) el.value=data.course; }
+    if (data.time) { const el=document.getElementById('f-time'); if(el) el.value=data.time; }
+    if (data.servings) { const el=document.getElementById('f-servings'); if(el) el.value=data.servings; }
+    if (data.emoji) { const el=document.getElementById('f-emoji'); if(el) el.value=data.emoji; }
+    if (data.notes) { const el=document.getElementById('f-notes'); if(el) el.value=data.notes; }
+    if (data.ingredients?.length) { modalIngredients=data.ingredients; rebuildIngs(); }
+    if (data.steps?.length) { modalSteps=data.steps; rebuildSteps(); }
+    if (overrides.sourceUrl) {
+      const urlEl = document.getElementById('f-source-url');
+      if (urlEl) urlEl.value = overrides.sourceUrl;
+    }
+    return true;
+  } catch(e) {
+    console.error('fillFormFromAI parse error:', e, 'Raw text:', jsonText?.substring(0,200));
+    showToast('⚠️ Could not parse AI response — please fill in manually');
+    return false;
+  }
 }
 
 // ═══════════════════════════════════════════
