@@ -742,10 +742,39 @@ body {
   .app { flex-direction: column !important; }
   .content { width: 100% !important; height: calc(100vh - 60px) !important; overflow-y: auto !important; }
   .recipe-grid { grid-template-columns: 1fr !important; }
-  .mobile-nav { display: flex !important; }
   .topbar { padding: 12px 14px; }
   .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
   .modal { border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; }
+
+  .mobile-nav {
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important; left: 0 !important; right: 0 !important;
+    height: 60px !important;
+    background: var(--sidebar) !important;
+    border-top: 1.5px solid var(--border) !important;
+    z-index: 999 !important;
+    align-items: stretch !important;
+  }
+  .mobile-nav-item {
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 8px !important;
+    font-weight: 700 !important;
+    color: var(--ink3) !important;
+    cursor: pointer !important;
+    gap: 2px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    border: none !important;
+    background: none !important;
+    font-family: 'Lato', sans-serif !important;
+  }
+  .mobile-nav-item.active { color: var(--accent) !important; }
+  .mobile-nav-icon { font-size: 20px !important; line-height: 1 !important; }
 }
 </style>
 </head>
