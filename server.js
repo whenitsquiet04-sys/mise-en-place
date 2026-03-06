@@ -78,12 +78,14 @@ function fetchJSON(url) {
   });
 }
 
-function httpsPost(hostname, urlPath, data) {
+function httpsPost(hostname, urlPath, data, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
-    const body = new URLSearchParams(data).toString();
+    const isJson = typeof data === 'string';
+    const body = isJson ? data : new URLSearchParams(data).toString();
+    const contentType = isJson ? 'application/json' : 'application/x-www-form-urlencoded';
     const req = https.request({
       hostname, path: urlPath, method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) }
+      headers: { 'Content-Type': contentType, 'Content-Length': Buffer.byteLength(body), ...extraHeaders }
     }, res => {
       let d = ''; res.on('data', c => d += c);
       res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
@@ -149,6 +151,32 @@ const server = http.createServer(async (req, res) => {
       const user = getSession(req);
       if (!user) return json(res, { user: null });
       return json(res, { user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar } });
+    }
+
+    // Gemini API proxy
+    if (pathname === '/api/claude' && req.method === 'POST') {
+      const user = getSession(req);
+      if (!user) return json(res, { error: 'Unauthorized' }, 401);
+      const GEMINI_KEY = process.env.GEMINI_API_KEY;
+      if (!GEMINI_KEY) return json(res, { error: 'GEMINI_API_KEY not configured on server' }, 500);
+      const body = await parseBody(req);
+      try {
+        const prompt = (body.system ? body.system + '\n\n' : '') + (typeof body.content === 'string' ? body.content : JSON.stringify(body.content));
+        const payload = JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 2000, temperature: 0.2 }
+        });
+        const result = await httpsPost(
+          'generativelanguage.googleapis.com',
+          `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+          payload
+        );
+        const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        return json(res, { text });
+      } catch(e) {
+        console.error('Gemini proxy error:', e.message);
+        return json(res, { error: 'Gemini API failed' }, 500);
+      }
     }
 
     if (pathname.startsWith('/api/')) {
