@@ -1,6 +1,7 @@
 {
   "name": "mise-en-place",
   "version": "1.0.0",
+  "description": "Personal recipe collection with Google login",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

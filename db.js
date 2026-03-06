@@ -1,63 +1,63 @@
-const Database = require('better-sqlite3');
-const path = require('path');
+// Pure Node.js JSON file database — no native dependencies needed
 const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 
-const DB_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'db');
+const DB_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH
+  || process.env.DATA_DIR
+  || path.join(__dirname, 'data');
+
 if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
 
-const db = new Database(path.join(DB_DIR, 'mise.db'));
+const DB_FILE = path.join(DB_DIR, 'mise.json');
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+function loadDB() {
+  try {
+    if (fs.existsSync(DB_FILE)) return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+  } catch(e) { console.error('DB load error:', e); }
+  return { users: {}, sessions: {}, data: {} };
+}
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id TEXT PRIMARY KEY,
-    email TEXT UNIQUE NOT NULL,
-    name TEXT,
-    avatar TEXT,
-    created_at INTEGER DEFAULT (unixepoch())
-  );
+function saveDB(db) {
+  try { fs.writeFileSync(DB_FILE, JSON.stringify(db), 'utf8'); }
+  catch(e) { console.error('DB save error:', e); }
+}
 
-  CREATE TABLE IF NOT EXISTS recipes (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    data TEXT NOT NULL,
-    updated_at INTEGER DEFAULT (unixepoch())
-  );
+let _db = loadDB();
 
-  CREATE TABLE IF NOT EXISTS meal_plans (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    data TEXT NOT NULL,
-    updated_at INTEGER DEFAULT (unixepoch())
-  );
+// Clean expired sessions
+const now = Math.floor(Date.now()/1000);
+Object.keys(_db.sessions || {}).forEach(t => { if (_db.sessions[t].expires_at < now) delete _db.sessions[t]; });
+saveDB(_db);
 
-  CREATE TABLE IF NOT EXISTS shopping_lists (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    data TEXT NOT NULL,
-    updated_at INTEGER DEFAULT (unixepoch())
-  );
-
-  CREATE TABLE IF NOT EXISTS tags (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    data TEXT NOT NULL,
-    updated_at INTEGER DEFAULT (unixepoch())
-  );
-
-  CREATE TABLE IF NOT EXISTS sessions (
-    token TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at INTEGER DEFAULT (unixepoch()),
-    expires_at INTEGER NOT NULL
-  );
-`);
-
-// Clean expired sessions periodically
-setInterval(() => {
-  db.prepare('DELETE FROM sessions WHERE expires_at < ?').run(Math.floor(Date.now()/1000));
-}, 60 * 60 * 1000);
+const db = {
+  upsertUser(id, email, name, avatar) {
+    _db = loadDB(); _db.users[id] = { id, email, name, avatar }; saveDB(_db); return _db.users[id];
+  },
+  getUser(id) { _db = loadDB(); return _db.users[id] || null; },
+  createSession(userId) {
+    _db = loadDB();
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Math.floor(Date.now()/1000) + (60*60*24*30);
+    if (!_db.sessions) _db.sessions = {};
+    _db.sessions[token] = { token, user_id: userId, expires_at: expiresAt };
+    saveDB(_db); return token;
+  },
+  getSession(token) {
+    _db = loadDB();
+    const session = (_db.sessions || {})[token];
+    if (!session) return null;
+    if (session.expires_at < Math.floor(Date.now()/1000)) { delete _db.sessions[token]; saveDB(_db); return null; }
+    return _db.users[session.user_id] || null;
+  },
+  deleteSession(token) { _db = loadDB(); if (_db.sessions) delete _db.sessions[token]; saveDB(_db); },
+  getData(userId, resource) { _db = loadDB(); return ((_db.data || {})[userId] || {})[resource] || null; },
+  setData(userId, resource, data) {
+    _db = loadDB();
+    if (!_db.data) _db.data = {};
+    if (!_db.data[userId]) _db.data[userId] = {};
+    _db.data[userId][resource] = data; saveDB(_db);
+  },
+};
 
 module.exports = db;
