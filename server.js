@@ -184,6 +184,7 @@ const server = http.createServer(async (req, res) => {
         });
         // Strip HTML tags, limit to 8000 chars
         const stripped = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0, 8000);
+        console.log('Fetched URL:', body.url, '— chars:', stripped.length, '— preview:', stripped.substring(0, 200));
         return json(res, { text: stripped });
       } catch(e) {
         console.error('URL fetch error:', e.message);
