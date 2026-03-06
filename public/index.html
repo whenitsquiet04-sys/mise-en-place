@@ -822,8 +822,9 @@ body {
 </div>
 
 <div class="app">
+  <script>if(window.innerWidth<767){document.write('<style>#sidebar,#sidebar *{display:none!important}#sidebar{display:none!important}.app{flex-direction:column}</style>');}</script>
   <!-- SIDEBAR -->
-  <div class="sidebar">
+  <div class="sidebar" id="sidebar">
     <div class="sb-logo">
       <div class="sb-logo-text">Mise en Place</div>
       <div class="sb-logo-sub">Recipe Collection</div>
