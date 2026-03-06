@@ -193,7 +193,7 @@ const server = http.createServer(async (req, res) => {
         });
         const result = await httpsPost(
           'generativelanguage.googleapis.com',
-          `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+          `/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`,
           payload
         );
         console.log('Gemini result:', JSON.stringify(result).substring(0, 500));
