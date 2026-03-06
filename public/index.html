@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Mise en Place">
@@ -736,13 +736,14 @@ body {
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
 .fade-in { animation: fadeUp 0.2s ease forwards; }
 
-/* ── MOBILE (must be last to override) ── */
+/* ── MOBILE — must be last to win ── */
 @media (max-width: 767px) {
-  #sidebar { display: none !important; }
+  .sidebar { display: none !important; }
   .app { flex-direction: column !important; }
-  .content { width: 100% !important; height: calc(100vh - 60px) !important; overflow-y: auto !important; flex: 1 !important; }
+  .content { width: 100% !important; height: calc(100vh - 60px) !important; overflow-y: auto !important; }
   .recipe-grid { grid-template-columns: 1fr !important; }
   .mobile-nav { display: flex !important; }
+  .topbar { padding: 12px 14px; }
   .modal-overlay { align-items: flex-end !important; padding: 0 !important; }
   .modal { border-radius: 20px 20px 0 0 !important; max-height: 92vh !important; }
 }
@@ -771,9 +772,8 @@ body {
 </div>
 
 <div class="app">
-  <script>if(window.innerWidth<767){document.write('<style>#sidebar{display:none!important}</style>');}</script>
   <!-- SIDEBAR -->
-  <div class="sidebar" id="sidebar">
+  <div class="sidebar">
     <div class="sb-logo">
       <div class="sb-logo-text">Mise en Place</div>
       <div class="sb-logo-sub">Recipe Collection</div>
@@ -1725,57 +1725,8 @@ function openModal() { document.getElementById('modal-overlay').classList.add('s
 function closeModal() { document.getElementById('modal-overlay').classList.remove('show'); }
 function closeModalOnBg(e) { if(e.target===document.getElementById('modal-overlay')) closeModal(); }
 
-// Mobile layout detection - runs immediately and on resize
-function applyMobileLayout() {
-  const w = window.innerWidth;
-  // Debug — remove after testing
-  let dbg = document.getElementById('dbg-width');
-  if (!dbg) { dbg = document.createElement('div'); dbg.id = 'dbg-width'; dbg.style.cssText = 'position:fixed;top:60px;right:8px;background:red;color:white;font-size:11px;padding:3px 7px;border-radius:6px;z-index:9999;font-family:monospace;'; document.body.appendChild(dbg); }
-  dbg.textContent = w + 'px';
-  
-  const isMobile = w <= 768;
-  const sidebar = document.querySelector('.sidebar');
-  const mainContent = document.querySelector('.main-content') || document.querySelector('.content');
-  const mobileNav = document.getElementById('mobile-nav');
-  
-  if (!sidebar) return;
-  
-  if (isMobile) {
-    sidebar.style.cssText = 'width:100%;height:56px;flex-shrink:0;border-right:none;border-bottom:1.5px solid var(--border);flex-direction:row;align-items:center;position:fixed;top:0;left:0;right:0;z-index:50;padding:0 12px;overflow:visible;display:flex;';
-    document.querySelector('.sb-nav').style.display = 'none';
-    document.querySelector('.sb-add-btn').style.display = 'none';
-    document.querySelector('.sb-logo').style.cssText = 'padding:0 10px 0 4px;border-bottom:none;border-right:1px solid var(--border);flex-shrink:0;';
-    document.querySelector('.sb-logo-sub').style.display = 'none';
-    document.querySelector('.sb-logo-text').style.fontSize = '17px';
-    const sbUser = document.querySelector('.sb-user');
-    if (sbUser) sbUser.style.cssText = 'margin-top:0;margin-left:auto;border-top:none;padding:0;display:flex;align-items:center;';
-    document.querySelector('.app').style.flexDirection = 'column';
-    const content = document.getElementById('main-content') || document.querySelector('.content');
-    if (content) content.style.cssText = 'margin-top:56px;height:calc(100vh - 56px - 60px);overflow-y:auto;flex:1;';
-    if (mobileNav) mobileNav.style.display = 'flex';
-    const nameShort = document.getElementById('user-name-short');
-    if (nameShort) nameShort.style.display = 'none';
-  } else {
-    sidebar.style.cssText = '';
-    document.querySelector('.sb-nav').style.display = '';
-    document.querySelector('.sb-add-btn').style.display = '';
-    document.querySelector('.sb-logo').style.cssText = '';
-    document.querySelector('.sb-logo-sub').style.display = '';
-    document.querySelector('.sb-logo-text').style.fontSize = '';
-    const sbUser = document.querySelector('.sb-user');
-    if (sbUser) sbUser.style.cssText = '';
-    document.querySelector('.app').style.flexDirection = '';
-    const content = document.getElementById('main-content') || document.querySelector('.content');
-    if (content) content.style.cssText = '';
-    if (mobileNav) mobileNav.style.display = 'none';
-    const nameShort = document.getElementById('user-name-short');
-    if (nameShort) nameShort.style.display = '';
-  }
-}
-
-window.addEventListener('resize', applyMobileLayout);
-// Run after DOM is ready
-setTimeout(applyMobileLayout, 0);
+// Mobile nav handler
+function mobileNav(section) {
   document.querySelectorAll('.mobile-nav-item').forEach(el => el.classList.remove('active'));
   const map = { library: 'mnav-library', planner: 'mnav-planner', shopping: 'mnav-shopping', tags: 'mnav-tags' };
   if (map[section]) document.getElementById(map[section])?.classList.add('active');
@@ -1887,7 +1838,6 @@ if (new URLSearchParams(window.location.search).get('error') === 'auth_failed') 
 }
 
 renderContent(); // render immediately with defaults
-applyMobileLayout(); // apply mobile layout immediately
 
 initAuth(); // then auth + load real data
 
