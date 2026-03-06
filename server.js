@@ -3,7 +3,6 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const cookie = require('cookie');
 const db = require('./db');
 
 const PORT = process.env.PORT || 3000;
@@ -11,15 +10,43 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || '';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || '';
 const BASE_URL = (process.env.BASE_URL || `http://localhost:${PORT}`).replace(/\/$/, '');
 
+const PUBLIC_DIR = fs.existsSync(path.join(__dirname, 'public', 'index.html'))
+  ? path.join(__dirname, 'public')
+  : __dirname;
+
 const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript',
   '.json': 'application/json',
   '.css': 'text/css',
   '.png': 'image/png',
-  '.ico': 'image/x-icon',
   '.svg': 'image/svg+xml',
 };
+
+// ── Cookie helpers (no dependency) ──
+function parseCookies(req) {
+  const cookies = {};
+  const header = req.headers.cookie || '';
+  header.split(';').forEach(part => {
+    const [k, ...v] = part.trim().split('=');
+    if (k) cookies[decodeURIComponent(k.trim())] = decodeURIComponent(v.join('=').trim());
+  });
+  return cookies;
+}
+
+function setCookie(res, name, value, opts = {}) {
+  let str = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
+  if (opts.maxAge) str += `; Max-Age=${opts.maxAge}`;
+  if (opts.httpOnly !== false) str += '; HttpOnly';
+  str += '; Path=/; SameSite=Lax';
+  if (BASE_URL.startsWith('https')) str += '; Secure';
+  const existing = res.getHeader('Set-Cookie') || [];
+  res.setHeader('Set-Cookie', [...(Array.isArray(existing) ? existing : [existing]), str]);
+}
+
+function clearCookie(res, name) {
+  setCookie(res, name, '', { maxAge: 0 });
+}
 
 function parseBody(req) {
   return new Promise((resolve) => {
@@ -29,20 +56,8 @@ function parseBody(req) {
   });
 }
 
-function setCookie(res, name, value, opts = {}) {
-  const o = { httpOnly: true, path: '/', sameSite: 'lax', maxAge: 60*60*24*30, ...opts };
-  if (BASE_URL.startsWith('https')) o.secure = true;
-  res.setHeader('Set-Cookie', cookie.serialize(name, value, o));
-}
-
-function clearCookie(res, name) {
-  res.setHeader('Set-Cookie', cookie.serialize(name, '', { httpOnly: true, path: '/', maxAge: 0 }));
-}
-
-function getCookies(req) { return cookie.parse(req.headers.cookie || ''); }
-
 function getSession(req) {
-  const token = getCookies(req).session;
+  const token = parseCookies(req).session;
   if (!token) return null;
   return db.getSession(token);
 }
@@ -56,18 +71,18 @@ function redirect(res, url) { res.writeHead(302, { Location: url }); res.end(); 
 
 function fetchJSON(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'mise-en-place/1.0' } }, res => {
+    https.get(url, { headers: { 'User-Agent': 'mise/1.0' } }, res => {
       let d = ''; res.on('data', c => d += c);
       res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(e); } });
     }).on('error', reject);
   });
 }
 
-function httpsPost(hostname, path, data) {
+function httpsPost(hostname, urlPath, data) {
   return new Promise((resolve, reject) => {
     const body = new URLSearchParams(data).toString();
     const req = https.request({
-      hostname, path, method: 'POST',
+      hostname, path: urlPath, method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Content-Length': Buffer.byteLength(body) }
     }, res => {
       let d = ''; res.on('data', c => d += c);
@@ -77,11 +92,12 @@ function httpsPost(hostname, path, data) {
   });
 }
 
-function serveFile(res, filePath) {
+function serveStatic(res, filename) {
+  const filePath = path.join(PUBLIC_DIR, filename);
   if (!fs.existsSync(filePath)) return false;
-  const content = fs.readFileSync(filePath);
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath)] || 'application/octet-stream' });
-  res.end(content); return true;
+  res.writeHead(200, { 'Content-Type': MIME[path.extname(filePath)] || 'text/plain' });
+  res.end(fs.readFileSync(filePath));
+  return true;
 }
 
 const server = http.createServer(async (req, res) => {
@@ -89,16 +105,13 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname;
 
   try {
-    // ── Google OAuth ──
     if (pathname === '/auth/google') {
       const state = crypto.randomBytes(16).toString('hex');
       setCookie(res, 'oauth_state', state, { maxAge: 600 });
       const params = new URLSearchParams({
         client_id: GOOGLE_CLIENT_ID,
         redirect_uri: `${BASE_URL}/auth/google/callback`,
-        response_type: 'code',
-        scope: 'openid email profile',
-        state,
+        response_type: 'code', scope: 'openid email profile', state,
       });
       return redirect(res, `https://accounts.google.com/o/oauth2/v2/auth?${params}`);
     }
@@ -108,13 +121,10 @@ const server = http.createServer(async (req, res) => {
       if (!code || !GOOGLE_CLIENT_ID) return redirect(res, '/?error=auth_failed');
       try {
         const tokens = await httpsPost('oauth2.googleapis.com', '/token', {
-          code,
-          client_id: GOOGLE_CLIENT_ID,
-          client_secret: GOOGLE_CLIENT_SECRET,
-          redirect_uri: `${BASE_URL}/auth/google/callback`,
-          grant_type: 'authorization_code',
+          code, client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET,
+          redirect_uri: `${BASE_URL}/auth/google/callback`, grant_type: 'authorization_code',
         });
-        if (!tokens.access_token) throw new Error('No token');
+        if (!tokens.access_token) throw new Error('No access token: ' + JSON.stringify(tokens));
         const profile = await fetchJSON(`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${tokens.access_token}`);
         const userId = `google_${profile.sub}`;
         db.upsertUser(userId, profile.email, profile.name, profile.picture);
@@ -129,7 +139,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === '/auth/logout') {
-      const token = getCookies(req).session;
+      const token = parseCookies(req).session;
       if (token) db.deleteSession(token);
       clearCookie(res, 'session');
       return redirect(res, '/');
@@ -141,7 +151,6 @@ const server = http.createServer(async (req, res) => {
       return json(res, { user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar } });
     }
 
-    // ── API ──
     if (pathname.startsWith('/api/')) {
       const user = getSession(req);
       if (!user) return json(res, { error: 'Unauthorized' }, 401);
@@ -154,27 +163,22 @@ const server = http.createServer(async (req, res) => {
       }
     }
 
-    // ── Share target ──
     if (pathname === '/share') {
       const p = new URLSearchParams({ shared_url: url.searchParams.get('url')||'', shared_text: url.searchParams.get('text')||'' });
       return redirect(res, `/?${p}`);
     }
 
-    // ── Static files ──
-    if (pathname === '/' || pathname === '/index.html') {
-      return serveFile(res, path.join(__dirname, 'public', 'index.html'));
-    }
-    if (!serveFile(res, path.join(__dirname, 'public', pathname))) {
-      serveFile(res, path.join(__dirname, 'public', 'index.html'));
-    }
+    if (pathname === '/' || pathname === '/index.html') return serveStatic(res, 'index.html');
+    if (!serveStatic(res, pathname)) serveStatic(res, 'index.html');
 
   } catch(e) {
-    console.error('Server error:', e);
-    res.writeHead(500); res.end('Server error');
+    console.error('Request error:', e);
+    res.writeHead(500); res.end('Error: ' + e.message);
   }
 });
 
-server.listen(PORT, () => {
-  console.log(`🍽️  Mise en Place on port ${PORT}`);
-  console.log(`   Google auth: ${GOOGLE_CLIENT_ID ? '✓' : '✗ GOOGLE_CLIENT_ID not set'}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Mise en Place running on port ${PORT}`);
+  console.log(`Public dir: ${PUBLIC_DIR}`);
+  console.log(`Google auth: ${GOOGLE_CLIENT_ID ? 'configured' : 'NOT SET'}`);
 });
