@@ -153,6 +153,31 @@ const server = http.createServer(async (req, res) => {
       return json(res, { user: { id: user.id, email: user.email, name: user.name, avatar: user.avatar } });
     }
 
+    // Fetch URL content for recipe import
+    if (pathname === '/api/fetch-url' && req.method === 'POST') {
+      const user = getSession(req);
+      if (!user) return json(res, { error: 'Unauthorized' }, 401);
+      const body = await parseBody(req);
+      if (!body.url) return json(res, { error: 'No URL' }, 400);
+      try {
+        const urlObj = new URL(body.url);
+        const isHttps = urlObj.protocol === 'https:';
+        const lib = isHttps ? https : http;
+        const text = await new Promise((resolve, reject) => {
+          const options = { hostname: urlObj.hostname, path: urlObj.pathname + urlObj.search, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; recipe-importer/1.0)' } };
+          lib.get(options, res => {
+            let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
+          }).on('error', reject);
+        });
+        // Strip HTML tags, limit to 8000 chars
+        const stripped = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0, 8000);
+        return json(res, { text: stripped });
+      } catch(e) {
+        console.error('URL fetch error:', e.message);
+        return json(res, { error: 'Could not fetch URL' }, 500);
+      }
+    }
+
     // Gemini API proxy
     if (pathname === '/api/claude' && req.method === 'POST') {
       const user = getSession(req);
