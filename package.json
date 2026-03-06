@@ -1,16 +1,12 @@
 {
   "name": "mise-en-place",
   "version": "1.0.0",
-  "description": "Personal recipe collection with Google login",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "start": "node server.js"
   },
   "dependencies": {
-    "better-sqlite3": "^9.4.3",
-    "cookie": "^0.6.0",
-    "jose": "^5.2.3"
+    "cookie": "^0.6.0"
   },
   "engines": {
     "node": ">=18"
