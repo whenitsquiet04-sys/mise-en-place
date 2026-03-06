@@ -199,6 +199,28 @@ const server = http.createServer(async (req, res) => {
       if (!GEMINI_KEY) return json(res, { error: 'GEMINI_API_KEY not configured on server' }, 500);
       const body = await parseBody(req);
       try {
+        const models = ['gemini-pro', 'gemini-1.0-pro', 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-2.0-flash-lite'];
+        let text = '';
+        let workingModel = '';
+        for (const model of models) {
+          const payload = JSON.stringify({
+            contents: [{ parts: [{ text: 'Say "ok"' }] }],
+            generationConfig: { maxOutputTokens: 10 }
+          });
+          const result = await httpsPost(
+            'generativelanguage.googleapis.com',
+            `/v1beta/models/${model}:generateContent?key=${GEMINI_KEY}`,
+            payload
+          );
+          console.log(`Model ${model}:`, JSON.stringify(result).substring(0, 100));
+          if (result?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            workingModel = model;
+            break;
+          }
+        }
+        console.log('Working model:', workingModel);
+        if (!workingModel) return json(res, { error: 'No working Gemini model found' }, 500);
+
         const prompt = (body.system ? body.system + '\n\n' : '') + (typeof body.content === 'string' ? body.content : JSON.stringify(body.content));
         const payload = JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
@@ -206,12 +228,11 @@ const server = http.createServer(async (req, res) => {
         });
         const result = await httpsPost(
           'generativelanguage.googleapis.com',
-          `/v1/models/gemini-1.5-flash-001:generateContent`,
-          payload,
-          { 'x-goog-api-key': GEMINI_KEY }
+          `/v1beta/models/${workingModel}:generateContent?key=${GEMINI_KEY}`,
+          payload
         );
         console.log('Gemini result:', JSON.stringify(result).substring(0, 500));
-        const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        text = result?.candidates?.[0]?.content?.parts?.[0]?.text || '';
         console.log('Gemini text:', text.substring(0, 200));
         return json(res, { text });
       } catch(e) {
