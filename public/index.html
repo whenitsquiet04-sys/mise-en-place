@@ -2224,6 +2224,10 @@ function saveRecipe() {
 }
 
 async function callClaude(systemPrompt, userContent) {
+  // Check if we have a session first
+  if (!currentUser) {
+    throw new Error('Not signed in — please sign in with Google first');
+  }
   const resp = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
