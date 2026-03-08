@@ -94,6 +94,40 @@ function httpsPost(hostname, urlPath, data, extraHeaders = {}) {
   });
 }
 
+function fetchWithRedirects(url, maxRedirects = 5) {
+  return new Promise((resolve, reject) => {
+    const attempt = (currentUrl, remaining) => {
+      if (remaining <= 0) return reject(new Error('Too many redirects'));
+      const urlObj = new URL(currentUrl);
+      const lib = urlObj.protocol === 'https:' ? https : http;
+      const options = {
+        hostname: urlObj.hostname,
+        port: urlObj.port || (urlObj.protocol === 'https:' ? 443 : 80),
+        path: urlObj.pathname + urlObj.search,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+        }
+      };
+      lib.get(options, res => {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+          const next = res.headers.location.startsWith('http') ? res.headers.location : `${urlObj.origin}${res.headers.location}`;
+          res.resume();
+          return attempt(next, remaining - 1);
+        }
+        if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+        let d = ''; res.setEncoding('utf8');
+        res.on('data', c => { d += c; if (d.length > 500000) res.destroy(); });
+        res.on('end', () => resolve(d));
+        res.on('error', reject);
+      }).on('error', reject);
+    };
+    attempt(url, maxRedirects);
+  });
+}
+
+
 function serveStatic(res, filename) {
   const filePath = path.join(PUBLIC_DIR, filename);
   if (!fs.existsSync(filePath)) return false;
@@ -173,26 +207,28 @@ const server = http.createServer(async (req, res) => {
       const body = await parseBody(req);
       if (!body.url) return json(res, { error: 'No URL' }, 400);
       try {
-        const urlObj = new URL(body.url);
-        const isHttps = urlObj.protocol === 'https:';
-        const lib = isHttps ? https : http;
-        const text = await new Promise((resolve, reject) => {
-          const options = { hostname: urlObj.hostname, path: urlObj.pathname + urlObj.search, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; recipe-importer/1.0)' } };
-          lib.get(options, res => {
-            let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d));
-          }).on('error', reject);
-        });
-        // Strip HTML tags, limit to 8000 chars
+        const text = await fetchWithRedirects(body.url, 5);
         const stripped = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().substring(0, 8000);
-        console.log('Fetched URL:', body.url, '— chars:', stripped.length, '— preview:', stripped.substring(0, 200));
+        if (stripped.length < 100) return json(res, { error: 'Page was empty or blocked' }, 400);
         return json(res, { text: stripped });
       } catch(e) {
         console.error('URL fetch error:', e.message);
-        return json(res, { error: 'Could not fetch URL' }, 500);
+        return json(res, { error: 'Could not fetch URL: ' + e.message }, 500);
       }
     }
 
     // Groq API proxy
+    if (pathname === '/api/ping') {
+      const user = getSession(req);
+      const GROQ_KEY = process.env.GROQ_API_KEY;
+      return json(res, {
+        loggedIn: !!user,
+        user: user ? user.email : null,
+        groqKey: !!GROQ_KEY,
+        groqKeyPrefix: GROQ_KEY ? GROQ_KEY.substring(0, 8) + '…' : null,
+      });
+    }
+
     if (pathname === '/api/groq-models') {
       const GROQ_KEY = process.env.GROQ_API_KEY;
       if (!GROQ_KEY) return json(res, { error: 'No GROQ key' });
@@ -219,7 +255,7 @@ const server = http.createServer(async (req, res) => {
         if (body.system) messages.push({ role: 'system', content: body.system });
         messages.push({ role: 'user', content: typeof body.content === 'string' ? body.content : JSON.stringify(body.content) });
         const payload = JSON.stringify({
-          model: 'llama3-70b-8192',
+          model: 'llama-3.3-70b-versatile',
           messages,
           max_tokens: 2000,
           temperature: 0.2
@@ -232,12 +268,7 @@ const server = http.createServer(async (req, res) => {
         );
         if (result.error) {
           console.error('Groq API error:', JSON.stringify(result.error));
-          // Try fallback model if primary fails
-          const payload2 = JSON.stringify({ model: 'mixtral-8x7b-32768', messages, max_tokens: 2000, temperature: 0.2 });
-          const result2 = await httpsPost('api.groq.com', '/openai/v1/chat/completions', payload2, { 'Authorization': `Bearer ${GROQ_KEY}` });
-          const text2 = result2?.choices?.[0]?.message?.content || '';
-          if (!text2) return json(res, { error: result.error.message || 'Groq API failed' }, 500);
-          return json(res, { text: text2 });
+          return json(res, { error: result.error.message || 'Groq API error' }, 500);
         }
         const text = result?.choices?.[0]?.message?.content || '';
         return json(res, { text });
