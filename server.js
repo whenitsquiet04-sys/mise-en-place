@@ -193,6 +193,21 @@ const server = http.createServer(async (req, res) => {
     }
 
     // Groq API proxy
+    if (pathname === '/api/groq-models') {
+      const GROQ_KEY = process.env.GROQ_API_KEY;
+      if (!GROQ_KEY) return json(res, { error: 'No GROQ key' });
+      try {
+        const result = await new Promise((resolve, reject) => {
+          https.get('https://api.groq.com/openai/v1/models', {
+            headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'User-Agent': 'mise/1.0' }
+          }, res => { let d=''; res.on('data',c=>d+=c); res.on('end',()=>resolve(d)); }).on('error',reject);
+        });
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(result);
+      } catch(e) { return json(res, { error: e.message }); }
+      return;
+    }
+
     if (pathname === '/api/claude' && req.method === 'POST') {
       const user = getSession(req);
       if (!user) return json(res, { error: 'Unauthorized' }, 401);
@@ -204,7 +219,7 @@ const server = http.createServer(async (req, res) => {
         if (body.system) messages.push({ role: 'system', content: body.system });
         messages.push({ role: 'user', content: typeof body.content === 'string' ? body.content : JSON.stringify(body.content) });
         const payload = JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama3-70b-8192',
           messages,
           max_tokens: 2000,
           temperature: 0.2
@@ -215,12 +230,65 @@ const server = http.createServer(async (req, res) => {
           payload,
           { 'Authorization': `Bearer ${GROQ_KEY}` }
         );
-        console.log('Groq result:', JSON.stringify(result).substring(0, 300));
+        if (result.error) {
+          console.error('Groq API error:', JSON.stringify(result.error));
+          // Try fallback model if primary fails
+          const payload2 = JSON.stringify({ model: 'mixtral-8x7b-32768', messages, max_tokens: 2000, temperature: 0.2 });
+          const result2 = await httpsPost('api.groq.com', '/openai/v1/chat/completions', payload2, { 'Authorization': `Bearer ${GROQ_KEY}` });
+          const text2 = result2?.choices?.[0]?.message?.content || '';
+          if (!text2) return json(res, { error: result.error.message || 'Groq API failed' }, 500);
+          return json(res, { text: text2 });
+        }
         const text = result?.choices?.[0]?.message?.content || '';
         return json(res, { text });
       } catch(e) {
         console.error('Groq proxy error:', e.message);
-        return json(res, { error: 'Groq API failed' }, 500);
+        return json(res, { error: 'Groq API failed: ' + e.message }, 500);
+      }
+    }
+
+    // Recipe search via Edamam (free tier, no key needed for basic) → fallback to AI generate
+    if (pathname === '/api/recipe-search' && req.method === 'POST') {
+      const user = getSession(req);
+      if (!user) return json(res, { error: 'Unauthorized' }, 401);
+      const body = await parseBody(req);
+      const q = (body.query || '').trim();
+      if (!q) return json(res, { results: [] });
+      try {
+        // Use TheMealDB free API - no key required
+        const encoded = encodeURIComponent(q);
+        const data = await fetchJSON(`https://www.themealdb.com/api/json/v1/1/search.php?s=${encoded}`);
+        const meals = data.meals || [];
+        const results = meals.slice(0, 6).map(m => {
+          // Parse ingredients from MealDB format (up to 20 ingredient fields)
+          const ingredients = [];
+          for (let i = 1; i <= 20; i++) {
+            const ing = (m[`strIngredient${i}`] || '').trim();
+            const meas = (m[`strMeasure${i}`] || '').trim();
+            if (ing) ingredients.push({ qty: meas, name: ing });
+          }
+          // Split steps into array by sentence/newline
+          const stepsRaw = (m.strInstructions || '').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+          const steps = stepsRaw.split(/\n+/).map(s=>s.trim()).filter(s=>s.length>10).slice(0,20);
+          return {
+            title: m.strMeal,
+            course: mapMealDBCategory(m.strCategory),
+            emoji: categoryEmoji(m.strCategory),
+            time: null,
+            servings: 4,
+            coverImg: m.strMealThumb || null,
+            ingredients,
+            steps,
+            notes: m.strSource ? `Source: ${m.strSource}` : '',
+            source: 'url',
+            sourceUrl: m.strSource || m.strYoutube || '',
+            tags: [m.strCategory, m.strArea].filter(Boolean),
+          };
+        });
+        return json(res, { results });
+      } catch(e) {
+        console.error('Recipe search error:', e.message);
+        return json(res, { results: [] });
       }
     }
 
@@ -249,6 +317,15 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(500); res.end('Error: ' + e.message);
   }
 });
+
+function mapMealDBCategory(cat) {
+  const map = { Beef:'Mains', Chicken:'Mains', Pork:'Mains', Lamb:'Mains', Seafood:'Mains', Pasta:'Mains', Vegetarian:'Mains', Vegan:'Mains', Dessert:'Desserts', Starter:'Sides', Side:'Sides', Breakfast:'Breakfast', Miscellaneous:'Snacks', Goat:'Mains' };
+  return map[cat] || 'Mains';
+}
+function categoryEmoji(cat) {
+  const map = { Beef:'🥩', Chicken:'🍗', Pork:'🥓', Lamb:'🍖', Seafood:'🐟', Pasta:'🍝', Vegetarian:'🥦', Vegan:'🌿', Dessert:'🍰', Starter:'🥗', Side:'🥗', Breakfast:'🍳', Miscellaneous:'🍽️', Goat:'🐐' };
+  return map[cat] || '🍽️';
+}
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Mise en Place running on port ${PORT}`);
