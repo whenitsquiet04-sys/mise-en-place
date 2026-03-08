@@ -162,7 +162,14 @@ body {
 }
 .sb-item:hover { background: rgba(61,107,69,0.1); color: var(--ink); }
 .sb-item.active { background: rgba(61,107,69,0.16); color: var(--accent); }
-.sb-icon { font-size: 16px; flex-shrink: 0; }
+.sb-icon {
+  width: 26px; height: 26px; border-radius: 7px;
+  background: rgba(61,107,69,0.12);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.14s;
+}
+.sb-item.active .sb-icon { background: rgba(61,107,69,0.25); }
+.sb-item:hover .sb-icon { background: rgba(61,107,69,0.18); }
 .sb-badge {
   margin-left: auto; background: var(--accent-light);
   color: var(--accent); font-size: 9px; font-weight: 900;
@@ -277,10 +284,17 @@ body {
 }
 .rc-source-badge {
   position: absolute; top: 10px; right: 10px; z-index: 2;
-  font-size: 14px; background: rgba(255,255,255,0.85);
-  border-radius: 20px; padding: 2px 6px;
-  backdrop-filter: blur(4px);
+  background: rgba(255,255,255,0.85); border-radius: 20px; padding: 4px 7px;
+  backdrop-filter: blur(4px); display: flex; align-items: center; color: var(--ink2);
 }
+.rc-source-ig {
+  text-decoration: none;
+  background: rgba(255,255,255,0.92);
+  border: 1px solid rgba(200,80,120,0.25);
+  color: #c05080;
+  transition: all 0.14s;
+}
+.rc-source-ig:hover { background: rgba(255,220,235,0.95); border-color: rgba(200,80,120,0.5); transform: scale(1.1); }
 .rc-fav {
   position: absolute; bottom: 8px; right: 10px; z-index: 2;
   font-size: 18px; cursor: pointer;
@@ -574,6 +588,8 @@ body {
 .rd-action-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
 .rd-action-btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; border-color: transparent; }
 .rd-action-btn.danger:hover { border-color: #c04040; color: #c04040; background: rgba(200,64,64,0.07); }
+.rd-action-ig { border-color: rgba(200,80,120,0.3) !important; color: #c05080 !important; }
+.rd-action-ig:hover { border-color: #c05080 !important; background: rgba(255,220,235,0.5) !important; color: #a03060 !important; }
 
 /* ═══════════════════════════════════════════
    ADD / EDIT RECIPE MODAL
@@ -628,6 +644,177 @@ body {
 .import-btn:hover { opacity: 0.9; }
 .import-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .import-hint { font-size: 11px; color: var(--ink3); margin-top: 6px; line-height: 1.5; }
+
+/* ── ADD RECIPE MODAL – new search-first flow ── */
+.add-search-wrap {
+  max-width: 580px; padding: 32px 28px 28px; position: relative;
+}
+.add-search-title {
+  font-family: 'Playfair Display', serif; font-style: italic;
+  font-size: 26px; color: var(--ink); margin-bottom: 6px;
+}
+.add-search-sub { font-size: 11px; color: var(--ink3); margin-bottom: 22px; }
+.add-search-row {
+  display: flex; gap: 8px; margin-bottom: 6px;
+}
+.add-search-input {
+  flex: 1; padding: 12px 16px;
+  background: rgba(255,255,255,0.9); border: 1.5px solid var(--border);
+  border-radius: 12px; font-family: 'Lato', sans-serif;
+  font-size: 14px; color: var(--ink); outline: none; transition: border-color 0.15s;
+}
+.add-search-input:focus { border-color: var(--accent); }
+.add-search-btn {
+  padding: 12px 20px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; border-radius: 12px; color: #fff;
+  font-family: 'Lato', sans-serif; font-size: 13px; font-weight: 700;
+  cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+}
+.add-search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.add-search-status { font-size: 11px; color: var(--ink3); min-height: 18px; margin-bottom: 12px; }
+.add-search-results {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+}
+.add-sr-card {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: rgba(255,255,255,0.7);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  cursor: pointer; transition: all 0.14s;
+}
+.add-sr-card:hover { border-color: var(--accent); background: var(--accent-light); transform: translateY(-1px); }
+.add-sr-thumb {
+  width: 44px; height: 44px; border-radius: 8px;
+  object-fit: cover; flex-shrink: 0; background: var(--accent-light);
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+  overflow: hidden;
+}
+.add-sr-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.add-sr-info { flex: 1; min-width: 0; }
+.add-sr-name {
+  font-size: 12px; font-weight: 700; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.add-sr-meta { font-size: 10px; color: var(--ink3); margin-top: 2px; }
+.add-or-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 16px; color: var(--ink3); font-size: 11px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+}
+.add-or-divider::before, .add-or-divider::after {
+  content: ''; flex: 1; border-top: 1px dashed rgba(61,107,69,0.25);
+}
+.add-import-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 16px;
+}
+.add-import-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 8px; background: rgba(255,255,255,0.6);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  cursor: pointer; transition: all 0.14s; text-align: center;
+}
+.add-import-card:hover { border-color: var(--accent); background: var(--accent-light); }
+.add-import-icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: rgba(61,107,69,0.12);
+  display: flex; align-items: center; justify-content: center;
+}
+.add-import-label { font-size: 11px; font-weight: 700; color: var(--ink2); }
+.add-import-sub { font-size: 9px; color: var(--ink3); line-height: 1.4; }
+.add-manual-link {
+  text-align: center; font-size: 11px; color: var(--ink3);
+  cursor: pointer; padding: 4px;
+}
+.add-manual-link span { color: var(--accent); font-weight: 700; cursor: pointer; }
+.add-manual-link span:hover { text-decoration: underline; }
+
+/* ── IMPORT SUB-MODAL ── */
+.import-sub-wrap { max-width: 520px; padding: 28px 28px 24px; }
+.import-sub-back {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--ink3);
+  cursor: pointer; margin-bottom: 18px; transition: color 0.14s;
+}
+.import-sub-back:hover { color: var(--accent); }
+.import-sub-title {
+  font-family: 'Playfair Display', serif; font-style: italic;
+  font-size: 22px; color: var(--ink); margin-bottom: 16px;
+}
+.scan-upload-zone {
+  border: 2px dashed var(--border); border-radius: 14px;
+  padding: 32px 20px; text-align: center; cursor: pointer;
+  transition: all 0.14s; background: rgba(255,255,255,0.4); margin-bottom: 12px;
+}
+.scan-upload-zone:hover { border-color: var(--accent); background: var(--accent-light); }
+.scan-upload-icon { font-size: 32px; margin-bottom: 8px; }
+.scan-upload-label { font-size: 13px; font-weight: 700; color: var(--ink2); margin-bottom: 4px; }
+.scan-upload-sub { font-size: 11px; color: var(--ink3); }
+.scan-preview { width: 100%; border-radius: 12px; max-height: 200px; object-fit: contain; display: none; margin-bottom: 12px; }
+
+/* ── RECIPE PREVIEW CARD ── */
+.recipe-preview-wrap { max-width: 580px; padding: 0; overflow: hidden; }
+.rp-hero {
+  position: relative; height: 200px; background: var(--accent);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  overflow: hidden;
+}
+.rp-hero img { width: 100%; height: 100%; object-fit: cover; }
+.rp-hero-emoji { font-size: 64px; }
+.rp-hero-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to bottom, transparent 40%, rgba(26,46,26,0.7));
+}
+.rp-hero-course {
+  position: absolute; top: 14px; left: 16px;
+  background: rgba(255,255,255,0.9); border-radius: 20px;
+  padding: 3px 10px; font-size: 10px; font-weight: 700; color: var(--accent);
+  letter-spacing: 0.5px;
+}
+.rp-body { padding: 22px 24px 24px; }
+.rp-title {
+  font-family: 'Playfair Display', serif; font-style: italic;
+  font-size: 22px; color: var(--ink); margin-bottom: 6px; line-height: 1.2;
+}
+.rp-meta { display: flex; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
+.rp-meta-item { font-size: 11px; color: var(--ink3); display: flex; align-items: center; gap: 4px; font-weight: 700; }
+.rp-section-label {
+  font-size: 9px; font-weight: 700; color: var(--ink3);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;
+}
+.rp-ings {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; margin-bottom: 18px;
+}
+.rp-ing { font-size: 12px; color: var(--ink); display: flex; gap: 6px; }
+.rp-ing-qty { color: var(--accent); font-weight: 700; min-width: 50px; }
+.rp-steps { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.rp-step { display: flex; gap: 10px; }
+.rp-step-num {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 10px; font-weight: 700; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.rp-step-text { font-size: 12px; color: var(--ink2); line-height: 1.5; padding-top: 2px; }
+.rp-actions { display: flex; gap: 10px; padding-top: 4px; }
+.rp-add-btn {
+  flex: 1; padding: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; border-radius: 12px; color: #fff;
+  font-family: 'Lato', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.rp-add-btn:hover { opacity: 0.9; }
+.rp-edit-btn {
+  padding: 12px 20px; background: rgba(255,255,255,0.7);
+  border: 1.5px solid var(--border); border-radius: 12px;
+  font-family: 'Lato', sans-serif; font-size: 13px; font-weight: 700;
+  color: var(--ink2); cursor: pointer; transition: all 0.14s;
+}
+.rp-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+.rp-back {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 700; color: var(--ink3);
+  cursor: pointer; padding: 14px 24px 0; transition: color 0.14s;
+}
+.rp-back:hover { color: var(--accent); }
 .upload-zone {
   border: 2px dashed var(--border); border-radius: 12px; padding: 24px;
   text-align: center; cursor: pointer; transition: all 0.14s;
@@ -816,11 +1003,11 @@ body {
     <div class="sb-nav">
       <div class="sb-sec">Library</div>
       <div class="sb-item active" id="nav-recipes" onclick="showTab('recipes')">
-        <span class="sb-icon">📖</span> All Recipes
+        <span class="sb-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span> All Recipes
         <span class="sb-badge" id="nb-all">0</span>
       </div>
       <div class="sb-item" id="nav-favourites" onclick="showTab('favourites')">
-        <span class="sb-icon">⭐</span> Favourites
+        <span class="sb-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> Favourites
         <span class="sb-badge" id="nb-fav">0</span>
       </div>
       <div class="sb-sec">Courses</div>
@@ -828,14 +1015,14 @@ body {
       <hr class="sb-divider">
       <div class="sb-sec">Plan & Shop</div>
       <div class="sb-item" id="nav-planner" onclick="showTab('planner')">
-        <span class="sb-icon">📅</span> Meal Planner
+        <span class="sb-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span> Meal Planner
       </div>
       <div class="sb-item" id="nav-shopping" onclick="showTab('shopping')">
-        <span class="sb-icon">🛒</span> Shopping List
+        <span class="sb-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span> Shopping List
       </div>
       <hr class="sb-divider">
       <div class="sb-item" id="nav-tags" onclick="showTab('tags')">
-        <span class="sb-icon">🏷️</span> My Tags
+        <span class="sb-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span> My Tags
       </div>
     </div>
     <button class="sb-add-btn" onclick="openAddRecipe()">
@@ -874,16 +1061,16 @@ body {
 <!-- MOBILE BOTTOM NAV -->
 <div class="mobile-nav" id="mobile-nav">
   <button class="mobile-nav-item active" id="mnav-library" onclick="mobileNav('library')">
-    <span class="mobile-nav-icon">📖</span>Library
+    <span class="mobile-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Library
   </button>
   <button class="mobile-nav-item" id="mnav-planner" onclick="mobileNav('planner')">
-    <span class="mobile-nav-icon">📅</span>Plan
+    <span class="mobile-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Plan
   </button>
   <button class="mobile-nav-item" id="mnav-shopping" onclick="mobileNav('shopping')">
-    <span class="mobile-nav-icon">🛒</span>Shop
+    <span class="mobile-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></span>Shop
   </button>
   <button class="mobile-nav-item" id="mnav-tags" onclick="mobileNav('tags')">
-    <span class="mobile-nav-icon">🏷️</span>Tags
+    <span class="mobile-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>Tags
   </button>
   <button class="mobile-nav-item" onclick="openAddRecipe()">
     <span class="mobile-nav-icon">＋</span>Add
@@ -996,7 +1183,12 @@ function tagHTML(name, clickable=true) {
   const click = clickable ? `onclick="event.stopPropagation();filterByTag('${esc(name)}')" style="${style};cursor:pointer"` : `style="${style}"`;
   return `<span class="rc-tag" ${click}>${esc(name)}</span>`;
 }
-function sourceIcon(s) { return s==='instagram'?'📸':s==='url'?'🔗':s==='cookbook'?'📚':'✏️'; }
+function sourceIcon(s) {
+  if (s === 'instagram') return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>`;
+  if (s === 'url') return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
+  if (s === 'cookbook') return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>`;
+  return `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+}
 function coverHTML(r, w=52, h=52, radius=8) {
   if (r.coverImg) return `<img src="${r.coverImg}" style="width:${w}px;height:${h}px;object-fit:cover;border-radius:${radius}px;display:block">`;
   return `<span style="font-size:${Math.round(w*0.55)}px">${r.emoji||'🍽️'}</span>`;
@@ -1021,12 +1213,22 @@ function updateSidebar() {
   document.getElementById('nb-all').textContent = S.recipes.length;
   document.getElementById('nb-fav').textContent = S.recipes.filter(r=>r.favourite).length;
   const coursesEl = document.getElementById('sb-courses');
-  const courseEmoji = {Mains:'🍝',Sides:'🥗',Desserts:'🎂',Snacks:'🍿',Baking:'🥐',Soups:'🍲',Breakfast:'🍳',Drinks:'🥤'};
+  const courseIcon = {
+    Mains:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`,
+    Sides:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22c0-6 4-10 10-10 0-6 4-10 10-10C22 12 18 16 12 16c0 6-4 10-10 10z"/></svg>`,
+    Desserts:  `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>`,
+    Snacks:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg>`,
+    Baking:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2 1 2 1"/><path d="M2 21h20"/><path d="M7 8v2M12 8v2M17 8v2"/><path d="M7 4a1 1 0 0 1 1-1 1 1 0 0 1 1 1c0 .55-.45 1-1 2-.55-1-1-1.45-1-2z"/></svg>`,
+    Soups:     `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a5 5 0 0 1 5 5v1H7V7a5 5 0 0 1 5-5z"/><path d="M4 8h16l-1.5 9H5.5L4 8z"/><path d="M2 8h20"/></svg>`,
+    Breakfast: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="6"/><circle cx="12" cy="13" r="2.5"/><path d="M12 7V4M8 7l-2-2M16 7l2-2"/></svg>`,
+    Drinks:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8l-1 7H9L8 2z"/><path d="M9 9c0 5 6 5 6 10H9c0-5 6-5 6-10"/><line x1="7" y1="22" x2="17" y2="22"/></svg>`,
+  };
+  const defaultIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
   coursesEl.innerHTML = S.courses.map(c => {
     const count = S.recipes.filter(r=>r.course===c).length;
     const isActive = currentTab==='recipes' && S.activeCourseFilter===c;
     return `<div class="sb-item ${isActive?'active':''}" onclick="filterByCourse('${esc(c)}')">
-      <span class="sb-icon">${courseEmoji[c]||'🍽️'}</span>${esc(c)}
+      <span class="sb-icon">${courseIcon[c]||defaultIcon}</span>${esc(c)}
       <span class="sb-badge">${count}</span>
     </div>`;
   }).join('');
@@ -1130,7 +1332,10 @@ function renderRecipeGrid(filter='all') {
         <div class="rc-img" style="background:linear-gradient(135deg,${gradientForCourse(r.course)})">
           ${r.coverImg?`<img src="${r.coverImg}">`:`<span class="rc-img-emoji">${r.emoji||'🍽️'}</span>`}
           <div class="rc-course-badge">${esc(r.course)}</div>
-          <div class="rc-source-badge">${sourceIcon(r.source)}</div>
+          ${r.source === 'instagram' && r.sourceUrl
+            ? `<a href="${esc(r.sourceUrl)}" target="_blank" onclick="event.stopPropagation()" class="rc-source-badge rc-source-ig" title="View on Instagram">${sourceIcon('instagram')}</a>`
+            : `<div class="rc-source-badge">${sourceIcon(r.source)}</div>`
+          }
           <div class="rc-fav" onclick="toggleFav(event,${r.id})">${r.favourite?'❤️':'🤍'}</div>
         </div>
         <div class="rc-body">
@@ -1168,7 +1373,15 @@ function openRecipeDetail(id) {
       <div class="rd-hero-meta">
         <div class="rd-hero-course">${esc(r.course)}</div>
         <div class="rd-hero-title">${esc(r.title)}</div>
-        <div class="rd-hero-source">${sourceIcon(r.source)} ${r.source==='url'&&r.sourceUrl?`<a href="${esc(r.sourceUrl)}" target="_blank" style="color:rgba(255,255,255,0.7)">${esc(r.sourceUrl.replace(/https?:\/\/(www\.)?/,'').slice(0,40))}</a>`:r.source==='instagram'?'from Instagram':r.source==='cookbook'?'from Cookbook':'Added manually'}</div>
+        <div class="rd-hero-source">${
+          r.source === 'instagram' && r.sourceUrl
+            ? `<a href="${esc(r.sourceUrl)}" target="_blank" style="color:rgba(255,255,255,0.85);display:inline-flex;align-items:center;gap:5px;text-decoration:none">${sourceIcon('instagram')} View on Instagram</a>`
+            : r.source === 'instagram'
+            ? `${sourceIcon('instagram')} from Instagram`
+            : r.source === 'url' && r.sourceUrl
+            ? `<a href="${esc(r.sourceUrl)}" target="_blank" style="color:rgba(255,255,255,0.7)">${esc(r.sourceUrl.replace(/https?:\/\/(www\.)?/,'').slice(0,40))}</a>`
+            : r.source === 'cookbook' ? `${sourceIcon('cookbook')} from Cookbook` : `${sourceIcon('manual')} Added manually`
+        }</div>
       </div>
     </div>
     <div class="rd-body">
@@ -1187,6 +1400,7 @@ function openRecipeDetail(id) {
       <div class="rd-actions">
         <button class="rd-action-btn primary" onclick="addToShoppingList(${r.id})">🛒 Add to Shopping List</button>
         <button class="rd-action-btn" onclick="openPlannerForRecipe(${r.id})">📅 Add to Meal Plan</button>
+        ${r.source === 'instagram' && r.sourceUrl ? `<a href="${esc(r.sourceUrl)}" target="_blank" class="rd-action-btn rd-action-ig" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:6px">${sourceIcon('instagram')} View on Instagram</a>` : ''}
         <button class="rd-action-btn" onclick="editRecipe(${r.id})">✏️ Edit Recipe</button>
         <button class="rd-action-btn danger" onclick="deleteRecipe(${r.id})">🗑 Delete</button>
       </div>
@@ -1490,12 +1704,369 @@ document.addEventListener('input', e=>{
 // ═══════════════════════════════════════════
 let editingRecipeId=null, modalCoverImg=null, modalIngredients=[], modalSteps=[], modalSelectedTags=[];
 
+// ═══════════════════════════════════════════
+// ADD RECIPE – search-first flow
+// ═══════════════════════════════════════════
+let _pendingPreview = null;
+
 function openAddRecipe() {
-  editingRecipeId=null; modalCoverImg=null;
-  modalIngredients=[{qty:'',name:''},{qty:'',name:''},{qty:'',name:''}];
-  modalSteps=['',''];
-  modalSelectedTags=[];
-  openRecipeForm();
+  document.getElementById('modal-body').innerHTML = buildAddSearchModal();
+  openModal();
+  setTimeout(() => document.getElementById('add-search-input')?.focus(), 100);
+}
+
+function buildAddSearchModal() {
+  return `
+  <div class="add-search-wrap">
+    <div class="add-search-title">Add a Recipe</div>
+    <div class="add-search-sub">Search by name, import from a URL or Instagram, or scan your cookbook.</div>
+
+    <div class="add-search-row">
+      <input class="add-search-input" id="add-search-input" placeholder="e.g. Chicken Tikka Masala…"
+        onkeydown="if(event.key==='Enter') doRecipeSearch()">
+      <button class="add-search-btn" id="add-search-btn" onclick="doRecipeSearch()">Search</button>
+    </div>
+    <div class="add-search-status" id="add-search-status"></div>
+    <div id="add-search-results"></div>
+
+    <div class="add-or-divider">or import</div>
+
+    <div class="add-import-grid">
+      <div class="add-import-card" onclick="openImportSub('url')">
+        <div class="add-import-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        </div>
+        <div class="add-import-label">From URL</div>
+        <div class="add-import-sub">Paste a recipe page link</div>
+      </div>
+      <div class="add-import-card" onclick="openImportSub('instagram')">
+        <div class="add-import-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        </div>
+        <div class="add-import-label">Instagram</div>
+        <div class="add-import-sub">Paste caption text</div>
+      </div>
+      <div class="add-import-card" onclick="openImportSub('scan')">
+        <div class="add-import-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <div class="add-import-label">Scan Cookbook</div>
+        <div class="add-import-sub">Photo of a recipe page</div>
+      </div>
+    </div>
+
+    <div class="add-manual-link">Can't find it? <span onclick="openAddRecipeManual()">Add manually</span></div>
+  </div>`;
+}
+
+async function doRecipeSearch() {
+  const q = document.getElementById('add-search-input')?.value.trim();
+  if (!q) return;
+  const btn = document.getElementById('add-search-btn');
+  const status = document.getElementById('add-search-status');
+  const results = document.getElementById('add-search-results');
+  btn.disabled = true; btn.textContent = '…';
+  status.textContent = 'Searching…';
+  results.innerHTML = '';
+  try {
+    const resp = await fetch('/api/recipe-search', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ query: q })
+    });
+    const data = await resp.json();
+    if (data.results?.length) {
+      status.textContent = `${data.results.length} results found`;
+      _pendingSearchResults = data.results;
+      results.innerHTML = `<div class="add-search-results">${data.results.map((r,i) => `
+        <div class="add-sr-card" onclick="openRecipePreview(${i})">
+          <div class="add-sr-thumb">${r.coverImg ? `<img src="${r.coverImg}" loading="lazy">` : `<span>${r.emoji||'🍽️'}</span>`}</div>
+          <div class="add-sr-info">
+            <div class="add-sr-name">${esc(r.title)}</div>
+            <div class="add-sr-meta">${esc(r.course)}${r.tags?.[1] ? ' · ' + esc(r.tags[1]) : ''}</div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    } else {
+      status.textContent = 'No results — try a different name, or use AI below';
+      results.innerHTML = `<div style="margin-bottom:16px">
+        <button class="import-btn" style="width:100%" onclick="doAIGenerateRecipe()">
+          ✨ Generate "${esc(q)}" with AI
+        </button>
+      </div>`;
+    }
+  } catch(e) {
+    status.textContent = 'Search failed — try AI generation';
+    results.innerHTML = `<div style="margin-bottom:16px">
+      <button class="import-btn" style="width:100%" onclick="doAIGenerateRecipe()">✨ Generate with AI</button>
+    </div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Search';
+}
+
+let _pendingSearchResults = [];
+
+async function doAIGenerateRecipe() {
+  const q = document.getElementById('add-search-input')?.value.trim();
+  if (!q) return;
+  const status = document.getElementById('add-search-status');
+  const results = document.getElementById('add-search-results');
+  status.textContent = '✨ Generating recipe with AI…';
+  results.innerHTML = '';
+  try {
+    const text = await callClaude(RECIPE_SYSTEM, `Generate a complete recipe for: ${q}`);
+    const clean = text.replace(/\`\`\`json|\`\`\`/g,'').trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) {
+      const r = JSON.parse(match[0]);
+      r.source = 'manual';
+      _pendingSearchResults = [r];
+      openRecipePreview(0);
+    }
+  } catch(e) {
+    status.textContent = 'AI generation failed — try adding manually';
+  }
+}
+
+function openRecipePreview(idx) {
+  const r = _pendingSearchResults[idx];
+  if (!r) return;
+  _pendingPreview = r;
+  const hasImg = r.coverImg;
+  const stepsToShow = (r.steps || []).slice(0, 4);
+  const ingsToShow = (r.ingredients || []).slice(0, 8);
+  document.getElementById('modal-body').innerHTML = `
+  <div class="rp-back" onclick="openAddRecipe()">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back to search
+  </div>
+  <div class="recipe-preview-wrap">
+    <div class="rp-hero">
+      ${hasImg ? `<img src="${r.coverImg}" alt="${esc(r.title)}">` : `<span class="rp-hero-emoji">${r.emoji||'🍽️'}</span>`}
+      <div class="rp-hero-overlay"></div>
+      <div class="rp-hero-course">${esc(r.course||'Recipe')}</div>
+    </div>
+    <div class="rp-body">
+      <div class="rp-title">${esc(r.title)}</div>
+      <div class="rp-meta">
+        ${r.servings ? `<span class="rp-meta-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Serves ${r.servings}</span>` : ''}
+        ${r.time ? `<span class="rp-meta-item"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ${r.time} min</span>` : ''}
+        ${r.tags?.[1] ? `<span class="rp-meta-item">${esc(r.tags[1])}</span>` : ''}
+      </div>
+      ${ingsToShow.length ? `
+      <div class="rp-section-label">Ingredients</div>
+      <div class="rp-ings">
+        ${ingsToShow.map(ing=>`<div class="rp-ing"><span class="rp-ing-qty">${esc(ing.qty)}</span><span>${esc(ing.name)}</span></div>`).join('')}
+        ${r.ingredients.length > 8 ? `<div class="rp-ing" style="color:var(--ink3);font-style:italic;grid-column:1/-1">+ ${r.ingredients.length - 8} more…</div>` : ''}
+      </div>` : ''}
+      ${stepsToShow.length ? `
+      <div class="rp-section-label">Method</div>
+      <div class="rp-steps">
+        ${stepsToShow.map((s,i)=>`<div class="rp-step"><div class="rp-step-num">${i+1}</div><div class="rp-step-text">${esc(s)}</div></div>`).join('')}
+        ${r.steps.length > 4 ? `<div class="rp-step"><div class="rp-step-num" style="background:var(--border);color:var(--ink3)">…</div><div class="rp-step-text" style="color:var(--ink3);font-style:italic">${r.steps.length - 4} more steps</div></div>` : ''}
+      </div>` : ''}
+      <div class="rp-actions">
+        <button class="rp-add-btn" onclick="addRecipeFromPreview()">Add to Collection</button>
+        <button class="rp-edit-btn" onclick="editRecipeFromPreview()">Edit first</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function addRecipeFromPreview() {
+  if (!_pendingPreview) return;
+  const r = _pendingPreview;
+  S.recipes.unshift({
+    id: S.nextId++, title: r.title, course: r.course || S.courses[0],
+    time: r.time || null, servings: r.servings || null,
+    emoji: r.emoji || '🍽️', coverImg: r.coverImg || null,
+    tags: r.tags || [], ingredients: r.ingredients || [],
+    steps: r.steps || [], notes: r.notes || '',
+    source: r.source || 'url', sourceUrl: r.sourceUrl || '',
+    favourite: false, dateAdded: new Date().toISOString().split('T')[0],
+  });
+  save(); closeModal(); renderContent();
+  showToast('🍽️ Recipe added!');
+}
+
+function editRecipeFromPreview() {
+  if (!_pendingPreview) return;
+  const r = _pendingPreview;
+  editingRecipeId = null; modalCoverImg = r.coverImg || null;
+  modalIngredients = r.ingredients?.length ? [...r.ingredients] : [{qty:'',name:''}];
+  modalSteps = r.steps?.length ? [...r.steps] : [''];
+  modalSelectedTags = r.tags || [];
+  openRecipeForm(null, r);
+}
+
+function openImportSub(type) {
+  const titles = { url: 'Import from URL', instagram: 'Import from Instagram', scan: 'Scan a Cookbook' };
+  const hints = {
+    url: 'Paste the full URL of a recipe page and AI will extract it automatically.',
+    instagram: 'Open the Instagram post, tap ··· → Copy, then paste the caption text below.',
+    scan: 'Take a photo of the recipe page — AI will read the text and extract the recipe.',
+  };
+  let content = '';
+  if (type === 'scan') {
+    content = `
+      <input type="file" id="scan-file-input" accept="image/*" style="display:none" onchange="handleScanFile(event)">
+      <div class="scan-upload-zone" onclick="document.getElementById('scan-file-input').click()">
+        <div class="scan-upload-icon">📷</div>
+        <div class="scan-upload-label">Tap to take a photo or upload</div>
+        <div class="scan-upload-sub">JPG, PNG or HEIC • Any cookbook, recipe card or printout</div>
+      </div>
+      <img id="scan-preview-img" class="scan-preview">
+      <div id="scan-sub-status" class="add-search-status"></div>`;
+  } else if (type === 'url') {
+    content = `
+      <input class="add-search-input" id="import-url-field" placeholder="https://www.example.com/recipe…" style="width:100%;margin-bottom:8px;box-sizing:border-box"
+        onkeydown="if(event.key==='Enter') doURLImport()">
+      <button class="import-btn" style="width:100%" onclick="doURLImport()">✨ Import Recipe</button>
+      <div id="url-sub-status" class="add-search-status" style="margin-top:8px"></div>`;
+  } else {
+    content = `
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label" style="display:block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px">Instagram URL (optional)</label>
+        <input class="add-search-input" id="ig-url-field" placeholder="https://www.instagram.com/p/…" style="width:100%;margin-bottom:10px">
+      </div>
+      <div class="form-group" style="margin-bottom:10px">
+        <label class="form-label" style="display:block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink3);margin-bottom:5px">Caption text</label>
+        <textarea class="import-url-input" id="ig-text-field" placeholder="Paste the Instagram caption here…" style="width:100%;height:120px;resize:none;box-sizing:border-box;margin-bottom:8px"></textarea>
+      </div>
+      <button class="import-btn" style="width:100%" onclick="doIGImport()">✨ Extract Recipe</button>
+      <div id="ig-sub-status" class="add-search-status" style="margin-top:8px"></div>`;
+  }
+
+  document.getElementById('modal-body').innerHTML = `
+  <div class="import-sub-wrap">
+    <div class="import-sub-back" onclick="openAddRecipe()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </div>
+    <div class="import-sub-title">${titles[type]}</div>
+    <div class="import-hint" style="margin-bottom:16px">${hints[type]}</div>
+    ${content}
+  </div>`;
+}
+
+async function doURLImport() {
+  const url = document.getElementById('import-url-field')?.value.trim();
+  if (!url) { showToast('⚠️ Enter a URL first'); return; }
+  const status = document.getElementById('url-sub-status');
+  status.textContent = '⏳ Fetching page…';
+  try {
+    const resp = await fetch('/api/fetch-url', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url}) });
+    const data = await resp.json();
+    if (!data.text) throw new Error('Could not fetch page content');
+    status.textContent = '✨ Extracting recipe…';
+    const text = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this text. Set source to "url", sourceUrl to "${url}".\n\n${data.text}`);
+    const clean = text.replace(/```json|```/g,'').trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) {
+      const r = JSON.parse(match[0]);
+      r.source = 'url'; r.sourceUrl = url;
+      _pendingSearchResults = [r]; _pendingPreview = r;
+      openRecipePreview(0);
+    } else {
+      status.textContent = '⚠️ AI could not extract a recipe — try pasting the text manually';
+    }
+  } catch(e) {
+    console.error('URL import error:', e);
+    status.textContent = `⚠️ ${e.message || 'Import failed — try again'}`;
+  }
+}
+
+async function doIGImport() {
+  const text = document.getElementById('ig-text-field')?.value.trim();
+  const igUrl = document.getElementById('ig-url-field')?.value.trim() || '';
+  if (!text) { showToast('⚠️ Paste some text first'); return; }
+  const status = document.getElementById('ig-sub-status');
+  status.textContent = '✨ Extracting recipe…';
+  try {
+    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this Instagram caption. Set source to "instagram"${igUrl ? `, sourceUrl to "${igUrl}"` : ''}.\n\n${text}`);
+    const clean = result.replace(/```json|```/g,'').trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) {
+      const r = JSON.parse(match[0]);
+      r.source = 'instagram';
+      if (igUrl) r.sourceUrl = igUrl;
+      _pendingSearchResults = [r]; _pendingPreview = r;
+      openRecipePreview(0);
+    } else {
+      status.textContent = '⚠️ AI could not extract a recipe — make sure the caption includes ingredients or steps';
+    }
+  } catch(e) {
+    console.error('IG import error:', e);
+    status.textContent = `⚠️ ${e.message || 'Extraction failed — try again'}`;
+  }
+}
+
+function runOCR(file) {
+  return new Promise((resolve, reject) => {
+    function doOCR() {
+      const url = URL.createObjectURL(file);
+      Tesseract.recognize(url, 'eng', {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            const pct = Math.round((m.progress||0)*100);
+            const st = document.getElementById('scan-sub-status');
+            if (st) st.textContent = `⏳ Reading text… ${pct}%`;
+          }
+        }
+      }).then(r => { URL.revokeObjectURL(url); resolve(r.data.text); })
+        .catch(err => { URL.revokeObjectURL(url); reject(err); });
+    }
+    if (window.Tesseract) { doOCR(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    script.onload = doOCR;
+    script.onerror = () => reject(new Error('Could not load OCR library'));
+    document.head.appendChild(script);
+  });
+}
+
+async function handleScanFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const preview = document.getElementById('scan-preview-img');
+  const status = document.getElementById('scan-sub-status');
+  if (preview) { preview.src = URL.createObjectURL(file); preview.style.display = 'block'; }
+  if (status) status.textContent = '⏳ Reading text from image…';
+  try {
+    let ocrText = '';
+    try {
+      ocrText = await runOCR(file);
+    } catch(ocrErr) {
+      console.error('OCR error:', ocrErr);
+      if (status) status.textContent = '⚠️ Could not read image — OCR library failed to load. Try pasting the recipe text into the Instagram or URL import instead.';
+      return;
+    }
+    if (!ocrText || ocrText.trim().length < 20) {
+      if (status) status.textContent = '⚠️ Could not read enough text — try a clearer, well-lit photo with the text filling the frame';
+      return;
+    }
+    if (status) status.textContent = '✨ Extracting recipe…';
+    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this cookbook page. Set source to "cookbook".\n\n${ocrText}`);
+    const clean = result.replace(/```json|```/g,'').trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (match) {
+      const r = JSON.parse(match[0]);
+      r.source = 'cookbook';
+      _pendingSearchResults = [r]; _pendingPreview = r;
+      openRecipePreview(0);
+    } else {
+      if (status) status.textContent = '⚠️ AI could not extract a recipe from the text — try a clearer photo';
+    }
+  } catch(e) {
+    console.error('Scan error:', e);
+    if (status) status.textContent = `⚠️ ${e.message || 'Could not process image — try again'}`;
+  }
+}
+
+function openAddRecipeManual() {
+  editingRecipeId = null; modalCoverImg = null;
+  modalIngredients = [{qty:'',name:''},{qty:'',name:''},{qty:'',name:''}];
+  modalSteps = ['',''];
+  modalSelectedTags = [];
+  openRecipeForm(null, null);
 }
 function editRecipe(id) {
   const r=S.recipes.find(r=>r.id===id); if(!r) return;
@@ -1506,7 +2077,8 @@ function editRecipe(id) {
   openRecipeForm(r);
 }
 
-function openRecipeForm(r=null) {
+function openRecipeForm(r=null, prefill=null) {
+  const data = prefill || r;
   const tagPills=S.tags.map(tag=>{
     const p=PALETTE[tag.paletteIdx%PALETTE.length];
     const sel=modalSelectedTags.includes(tag.name);
@@ -1517,53 +2089,30 @@ function openRecipeForm(r=null) {
   const stepsHTML=modalSteps.map((_,i)=>stepRowHTML(i)).join('');
   const coverDisplay=modalCoverImg
     ?`<img src="${modalCoverImg}" style="width:90px;height:90px;object-fit:cover;border-radius:12px;cursor:pointer" onclick="triggerCover()">`
-    :`<div class="cover-thumb" onclick="triggerCover()"><span>${r?.emoji||'🍽️'}</span></div>`;
+    :`<div class="cover-thumb" onclick="triggerCover()"><span>${data?.emoji||'🍽️'}</span></div>`;
 
   document.getElementById('modal-body').innerHTML = `
     <input type="file" id="cover-file" accept="image/*" style="display:none" onchange="handleCover(event)">
-    <input type="file" id="scan-file" accept="image/*" style="display:none" onchange="handleScan(event)">
-    <input type="file" id="ig-file" accept="image/*" style="display:none" onchange="handleIGScreenshot(event)">
     <div class="form-modal">
-      <div class="form-title">${r?'Edit Recipe':'Add Recipe'}</div>
-
-      <!-- IMPORT SECTION -->
-      <div class="import-section" ${r?'style="display:none"':''}>
-        <div class="import-title">✨ Import with AI</div>
-        <div class="import-tabs">
-          <div class="import-tab active" onclick="switchImport('url')">🔗 From URL</div>
-          <div class="import-tab" onclick="switchImport('instagram')">📸 Instagram</div>
-          <div class="import-tab" onclick="switchImport('scan')">📚 Scan Cookbook</div>
-        </div>
-        <div class="import-panel active" id="ip-url">
-          <textarea class="import-url-input" id="import-text" placeholder="Paste the recipe text here — copy it from any website, blog, or anywhere…" style="height:110px;resize:none;line-height:1.5;padding:10px 12px"></textarea>
-          <button class="import-btn" id="import-url-btn" onclick="importFromText()" style="width:100%;margin-top:6px">✨ Extract Recipe</button>
-          <div class="import-hint">Copy the recipe text from any website and paste it here. AI will extract the title, ingredients and steps automatically.</div>
-        </div>
-        <div class="import-panel" id="ip-instagram">
-          <textarea class="import-url-input" id="ig-text" placeholder="Paste the Instagram caption or recipe text here…" style="height:110px;resize:none;line-height:1.5;padding:10px 12px"></textarea>
-          <button class="import-btn" id="ig-import-btn" onclick="importFromIGText()" style="width:100%;margin-top:6px">✨ Extract Recipe</button>
-          <div class="import-hint">Open the Instagram post → tap <b>···</b> → <b>Copy</b> the caption, then paste it above. AI will extract the recipe automatically.</div>
-        </div>
-        <div class="import-panel" id="ip-scan">
-          <textarea class="import-url-input" id="scan-text" placeholder="Type or paste the recipe from your cookbook here…" style="height:110px;resize:none;line-height:1.5;padding:10px 12px"></textarea>
-          <button class="import-btn" id="scan-import-btn" onclick="importFromScanText()" style="width:100%;margin-top:6px">✨ Extract Recipe</button>
-          <div class="import-hint">Type out the recipe, or use your phone's camera to scan the page — iOS will let you copy the text directly from a photo in the Notes app.</div>
-        </div>
-      </div>
+      ${!r ? `<div class="import-sub-back" onclick="openAddRecipe()" style="margin-bottom:14px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </div>` : ''}
+      <div class="form-title">${r?'Edit Recipe': prefill ? prefill.title || 'Edit Recipe' : 'Add Recipe'}</div>
 
       <!-- BASIC INFO -->
       <div class="form-2col">
-        <div class="form-group"><label class="form-label">Recipe Title</label><input class="form-input" id="f-title" placeholder="e.g. Roast Chicken…" value="${esc(r?.title||'')}"></div>
+        <div class="form-group"><label class="form-label">Recipe Title</label><input class="form-input" id="f-title" placeholder="e.g. Roast Chicken…" value="${esc(data?.title||'')}"></div>
         <div class="form-group"><label class="form-label">Course</label>
           <select class="form-select" id="f-course">
-            ${S.courses.map(c=>`<option ${r?.course===c?'selected':''}>${esc(c)}</option>`).join('')}
+            ${S.courses.map(c=>`<option ${data?.course===c?'selected':''}>${esc(c)}</option>`).join('')}
           </select>
         </div>
       </div>
       <div class="form-3col">
-        <div class="form-group"><label class="form-label">Time (mins)</label><input class="form-input" id="f-time" type="number" placeholder="30" value="${r?.time||''}"></div>
-        <div class="form-group"><label class="form-label">Servings</label><input class="form-input" id="f-servings" type="number" placeholder="4" value="${r?.servings||''}"></div>
-        <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="f-emoji" placeholder="🍽️" value="${esc(r?.emoji||'')}"></div>
+        <div class="form-group"><label class="form-label">Time (mins)</label><input class="form-input" id="f-time" type="number" placeholder="30" value="${data?.time||''}"></div>
+        <div class="form-group"><label class="form-label">Servings</label><input class="form-input" id="f-servings" type="number" placeholder="4" value="${data?.servings||''}"></div>
+        <div class="form-group"><label class="form-label">Emoji</label><input class="form-input" id="f-emoji" placeholder="🍽️" value="${esc(data?.emoji||'')}"></div>
       </div>
       <div class="cover-upload-row" style="margin-bottom:16px">
         ${coverDisplay}
@@ -1602,7 +2151,7 @@ function openRecipeForm(r=null) {
       <!-- NOTES -->
       <div class="form-group">
         <label class="form-label">Notes / Tips</label>
-        <textarea class="form-textarea" id="f-notes" placeholder="Any tips, variations, or notes for yourself…" style="height:80px">${esc(r?.notes||'')}</textarea>
+        <textarea class="form-textarea" id="f-notes" placeholder="Any tips, variations, or notes for yourself…" style="height:80px">${esc(data?.notes||'')}</textarea>
       </div>
 
       <div class="form-btn-row">
@@ -1674,68 +2223,20 @@ function saveRecipe() {
   save(); closeModal(); renderContent();
 }
 
-// ═══════════════════════════════════════════
-// AI IMPORT
-// ═══════════════════════════════════════════
-function switchImport(type) {
-  document.querySelectorAll('.import-tab').forEach((el,i)=>el.classList.toggle('active',['url','instagram','scan'][i]===type));
-  ['url','instagram','scan'].forEach(t=>{ const p=document.getElementById('ip-'+t); if(p) p.classList.toggle('active',t===type); });
-}
-
 async function callClaude(systemPrompt, userContent) {
-  // Proxy through our server to avoid CORS and API key issues
   const resp = await fetch('/api/claude', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ system: systemPrompt, content: userContent })
   });
-  if (!resp.ok) throw new Error('Claude API error: ' + resp.status);
   const data = await resp.json();
+  if (!resp.ok || data.error) throw new Error(data.error || 'AI request failed (' + resp.status + ')');
   return data.text || '';
 }
 
 const RECIPE_SYSTEM = `You are a recipe extraction assistant. Extract recipe information and return ONLY valid JSON with this exact structure:
 {"title":"","course":"","time":0,"servings":0,"emoji":"🍽️","ingredients":[{"qty":"","name":""}],"steps":[""],"notes":"","source":"","sourceUrl":""}
 Course must be one of: Mains, Sides, Desserts, Snacks, Baking. Time is in minutes as a number. No markdown, no explanation, just the JSON object.`;
-
-async function importFromText() {
-  const text = document.getElementById('import-text')?.value.trim();
-  if(!text){showToast('⚠️ Paste some recipe text first');return;}
-  const btn=document.getElementById('import-url-btn'); btn.disabled=true; btn.textContent='⏳ Extracting…';
-  try {
-    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this text. Set source to "url".\n\n${text}`);
-    const ok = fillFormFromAI(result, {source:'url'});
-    if (ok) showToast('✨ Recipe extracted!');
-  } catch(e) {
-    console.error('importFromText error:', e);
-    showToast('⚠️ Extraction failed — try again');
-  }
-  btn.disabled=false; btn.textContent='✨ Extract Recipe';
-}
-
-async function importFromIGText() {
-  const text = document.getElementById('ig-text')?.value.trim();
-  if(!text){showToast('⚠️ Paste some text first');return;}
-  const btn=document.getElementById('ig-import-btn'); btn.disabled=true; btn.textContent='⏳ Extracting…';
-  try {
-    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this Instagram post text. Set source to "instagram".\n\n${text}`);
-    const ok = fillFormFromAI(result, {source:'instagram'});
-    if(ok) showToast('📸 Recipe extracted!');
-  } catch(e) { showToast('⚠️ Extraction failed — try again'); }
-  btn.disabled=false; btn.textContent='✨ Extract Recipe';
-}
-
-async function importFromScanText() {
-  const text = document.getElementById('scan-text')?.value.trim();
-  if(!text){showToast('⚠️ Paste some text first');return;}
-  const btn=document.getElementById('scan-import-btn'); btn.disabled=true; btn.textContent='⏳ Extracting…';
-  try {
-    const result = await callClaude(RECIPE_SYSTEM, `Extract the recipe from this cookbook text. Set source to "cookbook".\n\n${text}`);
-    const ok = fillFormFromAI(result, {source:'cookbook'});
-    if(ok) showToast('📚 Recipe extracted!');
-  } catch(e) { showToast('⚠️ Extraction failed — try again'); }
-  btn.disabled=false; btn.textContent='✨ Extract Recipe';
-}
 
 function fileToBase64(file) {
   return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(file); });
@@ -1904,43 +2405,38 @@ if ('serviceWorker' in navigator) {
   const sharedUrl = sp.get('shared_url') || sp.get('url');
   const sharedText = sp.get('shared_text') || sp.get('text');
   if (sharedUrl || sharedText) {
-    setTimeout(() => {
-      openAddRecipe();
-      setTimeout(async () => {
-        switchImport('instagram');
-        showToast('📸 Instagram post received…');
-        const status = document.getElementById('ig-status');
-        if (status) status.innerHTML = '<div class="ai-status"><span class="ai-spinner">⏳</span> Fetching recipe…</div>';
-        try {
-          let pageText = sharedText || '';
-          if (sharedUrl) {
-            // Try to fetch page content via server
-            try {
-              const fetchResp = await fetch('/api/fetch-url', {
-                method: 'POST', headers: {'Content-Type':'application/json'},
-                body: JSON.stringify({ url: sharedUrl })
-              });
-              const fetchData = await fetchResp.json();
-              if (fetchData.text && fetchData.text.length > 100) pageText = fetchData.text;
-            } catch(e) {}
-          }
-          const prompt = `Extract a recipe from this Instagram share. URL: ${sharedUrl||''}\nText: ${pageText}\nSet source to "instagram" and sourceUrl to "${sharedUrl||''}".`;
-          const text = await callClaude(RECIPE_SYSTEM, prompt);
-          const ok = fillFormFromAI(text, {source:'instagram', sourceUrl: sharedUrl||''});
-          if (ok) {
-            if (status) status.innerHTML = '<div class="ai-status">✅ Recipe extracted!</div>';
-            showToast('📸 Recipe extracted!');
-          } else {
-            // Fall back — put URL in the text box so user can try manually
-            const igText = document.getElementById('ig-text');
-            if (igText && sharedUrl) igText.value = sharedUrl;
-            if (status) status.innerHTML = '<div class="ai-status">⚠️ Could not auto-extract — paste the caption above</div>';
-          }
-        } catch(e) {
-          if (status) status.innerHTML = '<div class="ai-status">⚠️ Could not extract — paste the caption above</div>';
+    setTimeout(async () => {
+      showToast('📸 Instagram post received…');
+      try {
+        let pageText = sharedText || '';
+        if (sharedUrl) {
+          try {
+            const fetchResp = await fetch('/api/fetch-url', {
+              method: 'POST', headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ url: sharedUrl })
+            });
+            const fetchData = await fetchResp.json();
+            if (fetchData.text && fetchData.text.length > 100) pageText = fetchData.text;
+          } catch(e) {}
         }
-      }, 400);
-    }, 1000);
+        const prompt = `Extract a recipe from this Instagram share. URL: ${sharedUrl||''}\nText: ${pageText}\nSet source to "instagram" and sourceUrl to "${sharedUrl||''}".`;
+        const text = await callClaude(RECIPE_SYSTEM, prompt);
+        const clean = text.replace(/```json|```/g,'').trim();
+        const match = clean.match(/\{[\s\S]*\}/);
+        if (match) {
+          const r = JSON.parse(match[0]);
+          r.source = 'instagram'; r.sourceUrl = sharedUrl || '';
+          _pendingSearchResults = [r]; _pendingPreview = r;
+          openRecipePreview(0);
+          showToast('📸 Recipe extracted!');
+        } else {
+          openImportSub('instagram');
+          showToast('⚠️ Could not auto-extract — paste the caption');
+        }
+      } catch(e) {
+        openImportSub('instagram');
+      }
+    }, 800);
   }
 })();
 </script>
