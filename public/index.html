@@ -1087,7 +1087,7 @@ body {
 </div>
 
 <!-- EDIT CATEGORIES MODAL -->
-<div class="modal-overlay" id="cat-modal-overlay" onclick="if(event.target===this)closeCatModal()" style="display:none;z-index:300;position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px">
+<div class="modal-overlay" id="cat-modal-overlay" onclick="if(event.target===this)closeCatModal()">
   <div class="modal" style="position:relative;max-width:440px">
     <button class="modal-close" onclick="closeCatModal()">✕</button>
     <div style="padding:8px 0 14px">
@@ -1260,10 +1260,10 @@ function openEditCategories() {
   );
   renderCatList();
   renderParentSelect();
-  document.getElementById('cat-modal-overlay').style.display = 'flex';
+  document.getElementById('cat-modal-overlay').classList.add('show');
 }
 function closeCatModal() {
-  document.getElementById('cat-modal-overlay').style.display = 'none';
+  document.getElementById('cat-modal-overlay').classList.remove('show');
 }
 function renderParentSelect() {
   const sel = document.getElementById('cat-parent-select');
