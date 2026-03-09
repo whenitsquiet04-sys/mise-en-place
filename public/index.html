@@ -1,3 +1,4 @@
+
 <!-- v2-green-theme -->
 <!DOCTYPE html>
 <html lang="en">
@@ -169,6 +170,8 @@ body {
 }
 .sb-item.active .sb-icon { background: rgba(61,107,69,0.25); }
 .sb-item:hover .sb-icon { background: rgba(61,107,69,0.18); }
+.sb-subitem { padding-left: 32px; font-size: 12px; font-weight: 500; margin-bottom: 1px; }
+.sb-subitem .sb-icon { width: 18px; height: 18px; background: none; }
 .sb-badge {
   margin-left: auto; background: var(--accent-light);
   color: var(--accent); font-size: 9px; font-weight: 900;
@@ -1009,7 +1012,7 @@ body {
         <span class="sb-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> Favourites
         <span class="sb-badge" id="nb-fav">0</span>
       </div>
-      <div class="sb-sec">Courses</div>
+      <div class="sb-sec" style="display:flex;align-items:center;justify-content:space-between">Courses <span onclick="openEditCategories()" title="Edit categories" style="cursor:pointer;opacity:0.5;font-size:11px;padding:2px 6px;border-radius:4px;transition:opacity 0.15s" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.5">✎ Edit</span></div>
       <div id="sb-courses"></div>
       <hr class="sb-divider">
       <div class="sb-sec">Plan & Shop</div>
@@ -1084,6 +1087,32 @@ body {
   </div>
 </div>
 
+<!-- EDIT CATEGORIES MODAL -->
+<div class="modal-overlay" id="cat-modal-overlay" onclick="if(event.target===this)closeCatModal()" style="display:none">
+  <div class="modal" style="position:relative;max-width:440px">
+    <button class="modal-close" onclick="closeCatModal()">✕</button>
+    <div style="padding:8px 0 14px">
+      <div style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:4px">Edit Categories</div>
+      <div style="font-size:12px;color:var(--ink2)">Add, rename, nest subcategories, or reorder. Drag ⠿ to reorder.</div>
+    </div>
+    <div id="cat-list" style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;max-height:360px;overflow-y:auto;padding-right:2px"></div>
+    <div style="background:var(--accent-light);border-radius:10px;padding:12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Add New</div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input id="cat-new-input" placeholder="Category name…" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white" onkeydown="if(event.key==='Enter')addCategory()">
+        <button onclick="addCategory()" style="padding:8px 16px;background:var(--accent);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Add</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="cat-new-sub-input" placeholder="Subcategory name…" style="flex:1;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white" onkeydown="if(event.key==='Enter')addSubCategory()">
+        <select id="cat-parent-select" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:inherit;background:white;outline:none"></select>
+        <button onclick="addSubCategory()" style="padding:8px 14px;background:var(--accent2,#6a9a5a);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Add Sub</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--ink2);margin-bottom:14px">🔒 Categories/subcategories with recipes can't be deleted until recipes are reassigned.</div>
+    <button onclick="saveCatModal()" style="width:100%;padding:11px;background:var(--accent);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Save Changes</button>
+  </div>
+</div>
+
 <script>
 // ═══════════════════════════════════════════
 // PALETTE
@@ -1130,7 +1159,13 @@ function defaultState() {
       {id:6,name:'Japanese',paletteIdx:8},
       {id:7,name:'Bake',paletteIdx:5},
     ],
-    courses: ['Mains','Sides','Desserts','Snacks','Baking'],
+    courses: [
+      {name:'Mains',    subs:[]},
+      {name:'Sides',    subs:[]},
+      {name:'Desserts', subs:[]},
+      {name:'Snacks',   subs:[]},
+      {name:'Baking',   subs:[]},
+    ],
     weekOffset: 0,
     mealPlan: {},
     shoppingList: [],
@@ -1206,8 +1241,148 @@ function getRecipesByFilter(filter='all') {
 }
 
 // ═══════════════════════════════════════════
-// SIDEBAR UPDATE
+// EDIT CATEGORIES
 // ═══════════════════════════════════════════
+let _catDraft = [];
+let _dragSrc = null;
+
+function allCourseNames() {
+  return S.courses.flatMap(cat => {
+    const n = typeof cat === 'string' ? cat : cat.name;
+    const s = (typeof cat === 'object' && cat.subs) ? cat.subs : [];
+    return [n, ...s];
+  });
+}
+
+function openEditCategories() {
+  // Normalise to objects
+  _catDraft = S.courses.map(cat =>
+    typeof cat === 'string' ? {name: cat, subs: []} : {name: cat.name, subs: [...(cat.subs||[])]}
+  );
+  renderCatList();
+  renderParentSelect();
+  document.getElementById('cat-modal-overlay').style.display = 'flex';
+}
+function closeCatModal() {
+  document.getElementById('cat-modal-overlay').style.display = 'none';
+}
+function renderParentSelect() {
+  const sel = document.getElementById('cat-parent-select');
+  if (!sel) return;
+  sel.innerHTML = _catDraft.map((cat,i) => `<option value="${i}">${esc(cat.name)}</option>`).join('');
+}
+function renderCatList() {
+  const list = document.getElementById('cat-list');
+  list.innerHTML = _catDraft.map((cat, i) => {
+    const allNamesInCat = [cat.name, ...(cat.subs||[])];
+    const count = S.recipes.filter(r => allNamesInCat.includes(r.course)).length;
+    const canDelete = S.recipes.filter(r => r.course === cat.name).length === 0 && !(cat.subs||[]).length;
+    const subsHTML = (cat.subs||[]).map((sub, si) => {
+      const subCount = S.recipes.filter(r => r.course === sub).length;
+      const canDelSub = subCount === 0;
+      return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px 5px 28px;background:white;border:1px solid var(--border);border-radius:6px;margin-top:4px">
+        <span style="color:var(--ink2);font-size:12px">↳</span>
+        <input value="${esc(sub)}" onchange="_catDraft[${i}].subs[${si}]=this.value.trim()||_catDraft[${i}].subs[${si}]"
+          style="flex:1;border:none;background:transparent;font-size:12px;font-family:inherit;color:var(--ink);outline:none">
+        <span style="font-size:10px;color:var(--ink2);white-space:nowrap">${subCount}</span>
+        <button onclick="deleteSubCategory(${i},${si})" ${canDelSub?'':'disabled title="Has recipes"'}
+          style="background:none;border:none;cursor:${canDelSub?'pointer':'not-allowed'};font-size:12px;opacity:${canDelSub?'0.5':'0.2'};padding:1px 3px">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="cat-row" draggable="true" data-i="${i}"
+      ondragstart="catDragStart(event,${i})"
+      ondragover="catDragOver(event,${i})"
+      ondrop="catDrop(event,${i})"
+      ondragend="catDragEnd()"
+      style="background:var(--accent-light);border:1.5px solid var(--border);border-radius:10px;padding:8px 10px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="color:var(--ink2);font-size:16px;cursor:grab">⠿</span>
+        <input value="${esc(cat.name)}" onchange="_catDraft[${i}].name=this.value.trim()||_catDraft[${i}].name;renderParentSelect()"
+          style="flex:1;border:none;background:transparent;font-size:13px;font-family:inherit;color:var(--ink);outline:none;font-weight:600">
+        <span style="font-size:11px;color:var(--ink2);white-space:nowrap">${count} recipe${count===1?'':'s'}</span>
+        <button onclick="deleteCategory(${i})" ${canDelete?'':'disabled title="Has recipes or subcategories"'}
+          style="background:none;border:none;cursor:${canDelete?'pointer':'not-allowed'};font-size:14px;opacity:${canDelete?'0.6':'0.2'};padding:2px 4px">🗑</button>
+      </div>
+      ${subsHTML}
+    </div>`;
+  }).join('');
+}
+function addCategory() {
+  const inp = document.getElementById('cat-new-input');
+  const name = inp.value.trim();
+  if (!name) return;
+  const allNames = _catDraft.flatMap(c => [c.name, ...(c.subs||[])]);
+  if (allNames.includes(name)) { inp.style.borderColor='#e55'; setTimeout(()=>inp.style.borderColor='',1000); return; }
+  _catDraft.push({name, subs:[]});
+  inp.value = '';
+  renderCatList();
+  renderParentSelect();
+}
+function addSubCategory() {
+  const inp = document.getElementById('cat-new-sub-input');
+  const name = inp.value.trim();
+  const parentIdx = parseInt(document.getElementById('cat-parent-select').value);
+  if (!name || isNaN(parentIdx)) return;
+  const allNames = _catDraft.flatMap(c => [c.name, ...(c.subs||[])]);
+  if (allNames.includes(name)) { inp.style.borderColor='#e55'; setTimeout(()=>inp.style.borderColor='',1000); return; }
+  _catDraft[parentIdx].subs.push(name);
+  inp.value = '';
+  renderCatList();
+}
+function deleteCategory(i) {
+  const cat = _catDraft[i];
+  if (S.recipes.some(r => r.course === cat.name) || (cat.subs||[]).length) return;
+  _catDraft.splice(i, 1);
+  renderCatList();
+  renderParentSelect();
+}
+function deleteSubCategory(i, si) {
+  const sub = _catDraft[i].subs[si];
+  if (S.recipes.some(r => r.course === sub)) return;
+  _catDraft[i].subs.splice(si, 1);
+  renderCatList();
+}
+function saveCatModal() {
+  // Sync edited name inputs
+  document.querySelectorAll('#cat-list .cat-row > div > input').forEach((inp, i) => {
+    if (inp.value.trim() && _catDraft[i]) _catDraft[i].name = inp.value.trim();
+  });
+  _catDraft = _catDraft.filter(c => c.name);
+  // Ensure all recipe courses are still represented
+  const allNames = _catDraft.flatMap(c => [c.name, ...(c.subs||[])]);
+  S.recipes.forEach(r => {
+    if (!allNames.includes(r.course)) _catDraft.push({name: r.course, subs:[]});
+  });
+  S.courses = _catDraft;
+  save();
+  updateSidebar();
+  renderCourseTabs();
+  closeCatModal();
+  showToast('Categories saved');
+}
+function catDragStart(e, i) {
+  _dragSrc = i;
+  e.dataTransfer.effectAllowed = 'move';
+}
+function catDragOver(e, i) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.cat-row').forEach(r => r.style.outline = 'none');
+  if (i !== _dragSrc) { const el = document.querySelector(`.cat-row[data-i="${i}"]`); if(el) el.style.outline = '2px solid var(--accent)'; }
+}
+function catDrop(e, i) {
+  e.preventDefault();
+  if (_dragSrc === null || _dragSrc === i) return;
+  const moved = _catDraft.splice(_dragSrc, 1)[0];
+  _catDraft.splice(i, 0, moved);
+  renderCatList();
+}
+function catDragEnd() {
+  _dragSrc = null;
+  document.querySelectorAll('.cat-row').forEach(r => r.style.outline = 'none');
+}
+
+
 function updateSidebar() {
   document.getElementById('nb-all').textContent = S.recipes.length;
   document.getElementById('nb-fav').textContent = S.recipes.filter(r=>r.favourite).length;
@@ -1223,13 +1398,23 @@ function updateSidebar() {
     Drinks:    `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8l-1 7H9L8 2z"/><path d="M9 9c0 5 6 5 6 10H9c0-5 6-5 6-10"/><line x1="7" y1="22" x2="17" y2="22"/></svg>`,
   };
   const defaultIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>`;
-  coursesEl.innerHTML = S.courses.map(c => {
-    const count = S.recipes.filter(r=>r.course===c).length;
+  coursesEl.innerHTML = S.courses.map(cat => {
+    const c = typeof cat === 'string' ? cat : cat.name;
+    const subs = (typeof cat === 'object' && cat.subs) ? cat.subs : [];
+    const count = S.recipes.filter(r=>r.course===c || subs.includes(r.course)).length;
     const isActive = currentTab==='recipes' && S.activeCourseFilter===c;
+    const subsHTML = subs.map(sub => {
+      const subCount = S.recipes.filter(r=>r.course===sub).length;
+      const subActive = currentTab==='recipes' && S.activeCourseFilter===sub;
+      return `<div class="sb-item sb-subitem ${subActive?'active':''}" onclick="filterByCourse('${esc(sub)}')">
+        <span class="sb-icon" style="opacity:0.4">—</span>${esc(sub)}
+        <span class="sb-badge">${subCount}</span>
+      </div>`;
+    }).join('');
     return `<div class="sb-item ${isActive?'active':''}" onclick="filterByCourse('${esc(c)}')">
       <span class="sb-icon">${courseIcon[c]||defaultIcon}</span>${esc(c)}
       <span class="sb-badge">${count}</span>
-    </div>`;
+    </div>${subsHTML}`;
   }).join('');
 }
 
@@ -1296,7 +1481,12 @@ function renderMain() { renderContent(); }
 function renderCourseTabs() {
   const el = document.getElementById('course-tabs');
   const all = `<div class="ctab ${S.activeCourseFilter==='all'?'active':''}" onclick="filterCourse('all')">All</div>`;
-  const tabs = S.courses.map(c=>`<div class="ctab ${S.activeCourseFilter===c?'active':''}" onclick="filterCourse('${esc(c)}')">${esc(c)}</div>`).join('');
+  const allCourses = S.courses.flatMap(cat => {
+    const name = typeof cat === 'string' ? cat : cat.name;
+    const subs = (typeof cat === 'object' && cat.subs) ? cat.subs : [];
+    return [name, ...subs];
+  });
+  const tabs = allCourses.map(c=>`<div class="ctab ${S.activeCourseFilter===c?'active':''}" onclick="filterCourse('${esc(c)}')">${esc(c)}</div>`).join('');
   el.innerHTML = all + tabs;
 }
 function renderTopbarSearch() {
@@ -1321,7 +1511,11 @@ function renderRecipeGrid(filter='all') {
 
   const grouped = {};
   recipes.forEach(r=>{ if(!grouped[r.course]) grouped[r.course]=[]; grouped[r.course].push(r); });
-  const order = S.courses;
+  const order = S.courses.flatMap(cat => {
+    const name = typeof cat === 'string' ? cat : cat.name;
+    const subs = (typeof cat === 'object' && cat.subs) ? cat.subs : [];
+    return [name, ...subs];
+  });
   const keys = [...order.filter(c=>grouped[c]), ...Object.keys(grouped).filter(c=>!order.includes(c))];
 
   return keys.map(course => {
@@ -1875,7 +2069,7 @@ function addRecipeFromPreview() {
   if (!_pendingPreview) return;
   const r = _pendingPreview;
   S.recipes.unshift({
-    id: S.nextId++, title: r.title, course: r.course || S.courses[0],
+    id: S.nextId++, title: r.title, course: r.course || (typeof S.courses[0]==='string'?S.courses[0]:S.courses[0].name),
     time: r.time || null, servings: r.servings || null,
     emoji: r.emoji || '🍽️', coverImg: r.coverImg || null,
     tags: r.tags || [], ingredients: r.ingredients || [],
@@ -2104,7 +2298,7 @@ function openRecipeForm(r=null, prefill=null) {
         <div class="form-group"><label class="form-label">Recipe Title</label><input class="form-input" id="f-title" placeholder="e.g. Roast Chicken…" value="${esc(data?.title||'')}"></div>
         <div class="form-group"><label class="form-label">Course</label>
           <select class="form-select" id="f-course">
-            ${S.courses.map(c=>`<option ${data?.course===c?'selected':''}>${esc(c)}</option>`).join('')}
+            ${S.courses.flatMap(cat=>{const name=typeof cat==='string'?cat:cat.name;const subs=(typeof cat==='object'&&cat.subs)?cat.subs:[];if(subs.length){return[`<optgroup label="${esc(name)}">${subs.map(s=>`<option ${data?.course===s?'selected':''}>${esc(s)}</option>`).join('')}</optgroup>`];}return[`<option ${data?.course===name?'selected':''}>${esc(name)}</option>`];}).join('')}
           </select>
         </div>
       </div>
@@ -2203,7 +2397,7 @@ function saveRecipe() {
   if(!title){showToast('⚠️ Please enter a recipe title');return;}
   const recipe={
     title,
-    course:document.getElementById('f-course')?.value||S.courses[0],
+    course:document.getElementById('f-course')?.value||(typeof S.courses[0]==='string'?S.courses[0]:S.courses[0].name),
     time:parseInt(document.getElementById('f-time')?.value)||null,
     servings:parseInt(document.getElementById('f-servings')?.value)||null,
     emoji:document.getElementById('f-emoji')?.value||'🍽️',
@@ -2254,7 +2448,7 @@ function fillFormFromAI(jsonText, overrides={}) {
     const d = JSON.parse(clean);
     const data = {...d, ...overrides};
     if (data.title) { const el=document.getElementById('f-title'); if(el) el.value=data.title; }
-    if (data.course && S.courses.includes(data.course)) { const el=document.getElementById('f-course'); if(el) el.value=data.course; }
+    if (data.course && S.courses.flatMap(cat=>{const n=typeof cat==='string'?cat:cat.name;const s=(typeof cat==='object'&&cat.subs)?cat.subs:[];return[n,...s];}).includes(data.course)) { const el=document.getElementById('f-course'); if(el) el.value=data.course; }
     if (data.time) { const el=document.getElementById('f-time'); if(el) el.value=data.time; }
     if (data.servings) { const el=document.getElementById('f-servings'); if(el) el.value=data.servings; }
     if (data.emoji) { const el=document.getElementById('f-emoji'); if(el) el.value=data.emoji; }
